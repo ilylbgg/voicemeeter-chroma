@@ -14,12 +14,13 @@ using json = nlohmann::json;
 //      WINAPI      //
 //******************//
 
+static HANDLE (WINAPI *o_CreateMutexA)(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCSTR lpName) = CreateMutexA;
+static HFONT (WINAPI *o_CreateFontIndirectA)(const LOGFONTA* lplf) = CreateFontIndirectA;
+static BOOL (WINAPI *o_AppendMenuA)(HMENU hMenu, UINT uFlags, UINT_PTR uIDNewItem, LPCSTR lpNewItem) = AppendMenuA;
 static HPEN (WINAPI *o_CreatePen)(int iStyle, int cWidth, COLORREF color) = CreatePen;
 static HBRUSH (WINAPI *o_CreateBrushIndirect)(const LOGBRUSH* plbrush) = CreateBrushIndirect;
 static COLORREF (WINAPI *o_SetTextColor)(HDC hdc, COLORREF color) = SetTextColor;
-static HANDLE (WINAPI *o_CreateMutexA)(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCSTR lpName) = CreateMutexA;
-static BOOL (WINAPI *o_AppendMenuA)(HMENU hMenu, UINT uFlags, UINT_PTR uIDNewItem, LPCSTR lpNewItem) = AppendMenuA;
-static HFONT (WINAPI *o_CreateFontIndirectA)(const LOGFONTA* lplf) = CreateFontIndirectA;
+static ATOM (WINAPI *o_RegisterClassA)(const WNDCLASSA *lpWndClass) = RegisterClassA;
 
 //******************//
 //      CUSTOM      //
@@ -35,9 +36,11 @@ typedef struct signature
 #if defined(_WIN64)
 static signature_t sig_swap_bg = {{0x4C, 0x8B, 0xDC, 0x49, 0x89, 0x5B, 0x20, 0x56, 0x48, 0x83}, {"xxxxxxxxxx"}};
 typedef HBITMAP (__fastcall *o_swap_bg_t)(uint8_t* data_ptr, uint32_t res_size);
+typedef LRESULT (__fastcall *o_WndProc_t)(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 #else
 static signature_t sig_swap_bg = {{0x55, 0x8B, 0xEC, 0x8B, 0x45, 0x08, 0x53, 0x56, 0x57, 0x3B, 0x45, 0x0C}, {"xxxxxxxxxxxx"}};
 typedef void (__cdecl *o_swap_bg_t)(uint8_t** ppvBits, uint8_t* data_ptr, uint32_t size);
+typedef LRESULT (__stdcall *o_WndProc_t)(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 #endif
 
 //******************//
@@ -74,6 +77,7 @@ static std::vector<uint8_t> bg_bitmap_data;
 static bool init_complete = false;
 static json json_colors;
 static o_swap_bg_t o_swap_bg = nullptr;
+static o_WndProc_t o_WndProc = nullptr;
 static std::wstring userprofile_path;
 
 //******************//
@@ -326,7 +330,7 @@ BOOL WINAPI hk_AppendMenuA(HMENU hMenu, UINT uFlags, UINT_PTR uIDNewItem, LPCSTR
 /**
  * GDI function used to draw lines
  * We hook this function to change the color of UI elements made up of lines
- * Color values are parsed from the config.json
+ * Color values are parsed from the colors.json
  * See https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createpen
  */
 HPEN WINAPI hk_CreatePen(int iStyle, int cWidth, COLORREF color)
@@ -342,7 +346,7 @@ HPEN WINAPI hk_CreatePen(int iStyle, int cWidth, COLORREF color)
 /**
  * GDI function used to draw forms like filled rectangles
  * We hook this function to change the color of UI elements made up of such forms
- * Color values are parsed from the config.json
+ * Color values are parsed from the colors.json
  * See https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createbrushindirect
  */
 HBRUSH WINAPI hk_CreateBrushIndirect(LOGBRUSH* plbrush)
@@ -358,7 +362,7 @@ HBRUSH WINAPI hk_CreateBrushIndirect(LOGBRUSH* plbrush)
 /**
  * GDI function used to set the color of text
  * We hook this function to change text color
- * Color values are parsed from the config.json
+ * Color values are parsed from the colors.json
  * See https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-settextcolor
  */
 COLORREF WINAPI hk_SetTextColor(HDC hdc, COLORREF color)
@@ -372,6 +376,53 @@ COLORREF WINAPI hk_SetTextColor(HDC hdc, COLORREF color)
 }
 
 
+#if defined (_WIN64)
+/**
+ * We hook WndProc in order to listen for a click on the vmtheme menu item, which opens the Github URL in the browser
+ * See https://learn.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-wndproc
+ */
+LRESULT __fastcall hk_WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+#else
+/**
+ * We hook WndProc in order to listen for a click on the vmtheme menu item, which opens the Github URL in the browser
+ * See https://learn.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-wndproc
+ */
+LRESULT __stdcall hk_WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+#endif
+{
+    if (Msg == WM_COMMAND && LOWORD(wParam) == 0x1337)
+        ShellExecute(nullptr, L"open", L"https://github.com/emkaix/voicemeeter-themes", nullptr, nullptr, SW_SHOW);
+
+    return o_WndProc(hWnd, Msg, wParam, lParam);
+}
+
+/**
+ * We hook this function in order to get the address of WndProc from the lpWndClass pointer, so we can hook WndProc
+ * See https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerclassa
+ */
+ATOM WINAPI hk_RegisterClassA(const WNDCLASSA *lpWndClass)
+{
+    if (std::strcmp(lpWndClass->lpszClassName, "VBCABLE0Voicemeeter0MainWindow0") == 0)
+    {
+        o_WndProc = lpWndClass->lpfnWndProc;
+
+        if (DetourTransactionBegin() != NO_ERROR)
+            error(L"error DetourTransactionBegin");
+
+        if (DetourUpdateThread(GetCurrentThread()) != NO_ERROR)
+            error(L"error DetourUpdateThread");
+
+        if (DetourAttach(&reinterpret_cast<PVOID&>(o_WndProc), hk_WndProc) != NO_ERROR)
+            error(L"error DetourAttach");
+
+        if (DetourTransactionCommit() != NO_ERROR)
+            error(L"error DetourTransactionCommit");
+    }
+
+    return o_RegisterClassA(lpWndClass);
+}
+
+
 #if defined(_WIN64)
 /**
  * Copies the decrypted bitmap data into a buffer created by CreateDIBSection
@@ -382,6 +433,12 @@ COLORREF WINAPI hk_SetTextColor(HDC hdc, COLORREF color)
  * @return Not used
  */
 HBITMAP __fastcall hk_swap_bg(uint8_t* data_ptr, uint32_t size)
+{
+    if (size == active_flavor.bitmap_size)
+        return o_swap_bg(bg_bitmap_data.data(), size);
+
+    return o_swap_bg(data_ptr, size);
+}
 #else
 /**
  * Copies the decrypted bitmap data into a buffer created by CreateDIBSection
@@ -392,14 +449,7 @@ HBITMAP __fastcall hk_swap_bg(uint8_t* data_ptr, uint32_t size)
  * @param size Size of the actual bitmap data, excluding the header size
  */
 void __cdecl hk_swap_bg(uint8_t** ppvBits, uint8_t* data_ptr, uint32_t size)
-#endif
 {
-#if defined(_WIN64)
-    if (size == active_flavor.bitmap_size)
-        return o_swap_bg(bg_bitmap_data.data(), size);
-
-    return o_swap_bg(data_ptr, size);
-#else
     LPBITMAPFILEHEADER bitmap_header = reinterpret_cast<LPBITMAPFILEHEADER>(bg_bitmap_data.data());
     uint32_t bitmap_data_size = active_flavor.bitmap_size - bitmap_header->bfOffBits;
 
@@ -407,8 +457,8 @@ void __cdecl hk_swap_bg(uint8_t** ppvBits, uint8_t* data_ptr, uint32_t size)
         return o_swap_bg(ppvBits, &bg_bitmap_data[bitmap_header->bfOffBits], bitmap_data_size);
 
     return o_swap_bg(ppvBits, data_ptr, size);
-#endif
 }
+#endif
 
 //*****************************//
 //        DETOURS SETUP        //
@@ -451,6 +501,9 @@ void init_hooks()
     if (DetourAttach(&reinterpret_cast<PVOID&>(o_SetTextColor), hk_SetTextColor))
         error(L"error DetourAttach");
 
+    if (DetourAttach(&reinterpret_cast<PVOID&>(o_RegisterClassA), hk_RegisterClassA))
+        error(L"error DetourAttach");
+
     if (DetourAttach(&reinterpret_cast<PVOID&>(o_swap_bg), hk_swap_bg) != NO_ERROR)
         error(L"error DetourAttach");
 
@@ -487,7 +540,13 @@ void cleanup_hooks()
     if (DetourDetach(&reinterpret_cast<PVOID&>(o_SetTextColor), hk_SetTextColor))
         error(L"error DetourDetach");
 
-    if (DetourDetach(&reinterpret_cast<PVOID&>(o_swap_bg), hk_swap_bg) != NO_ERROR)
+    if (DetourDetach(&reinterpret_cast<PVOID&>(o_RegisterClassA), hk_RegisterClassA))
+        error(L"error DetourDetach");
+
+    if (o_WndProc != nullptr && DetourDetach(&reinterpret_cast<PVOID&>(o_WndProc), hk_WndProc) != NO_ERROR)
+        error(L"error DetourDetach");
+
+    if (o_swap_bg != nullptr && DetourDetach(&reinterpret_cast<PVOID&>(o_swap_bg), hk_swap_bg) != NO_ERROR)
         error(L"error DetourDetach");
 
     if (DetourTransactionCommit() != NO_ERROR)
