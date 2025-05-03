@@ -2,13 +2,17 @@
 
 Enables theming support for Voicemeeter.
 
+![UI](https://github.com/emkaix/voicemeeter-theme-catppuccin-macchiato/blob/main/banana.png?raw=true)
+
 - [Disclaimer](#disclaimer)
 - [Getting started](#getting-started)
+- [Build](#build)
 - [FAQ](#frequently-asked-questions)
+- [Dependencies](#dependencies)
 
 ## Disclaimer
 
-**This project is an unofficial, third-party, independent modification of Voicemeeter. It is not affiliated with, endorsed by, or in any way officially connected to VB-Audio Software or any of its subsidiaries or affiliates. All trademarks, service marks, and copyrights related to Voicemeeter are the property of VB-Audio Software.**
+:exclamation: **This project is an unofficial, third-party, independent modification of Voicemeeter. It is not affiliated with, endorsed by, or in any way officially connected to VB-Audio Software or any of its subsidiaries or affiliates. All trademarks, service marks, and copyrights related to Voicemeeter are the property of VB-Audio Software.**
 
 
 **If you have any problems related to or caused by this mod, you will not get any support whatsoever on the Voicemeeter forums or the Voicemeeter Discord.**
