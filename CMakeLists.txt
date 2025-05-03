@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.30)
 project(vmtheme)
 set(CMAKE_CXX_STANDARD 17)
 set(TARGET_DETOURS lib_detours)
-set(TARGET_VMHOOK vmtheme)
+set(TARGET_VMTHEME vmtheme)
 set(TARGET_LAUNCHER launcher)
 
 if (DEFINE_FLAVOR_BANANA)
@@ -90,14 +90,14 @@ FetchContent_MakeAvailable(json)
 # Target: vmtheme[32|64].dll #
 # -------------------------- #
 
-add_library(${TARGET_VMHOOK} SHARED src/vmtheme.cpp src/shared.h src/shared.cpp)
-target_include_directories(${TARGET_VMHOOK} PUBLIC ${DETOURS_SOURCE})
-target_link_libraries(${TARGET_VMHOOK} PRIVATE
+add_library(${TARGET_VMTHEME} SHARED src/vmtheme.cpp src/shared.h src/shared.cpp)
+target_include_directories(${TARGET_VMTHEME} PUBLIC ${DETOURS_SOURCE})
+target_link_libraries(${TARGET_VMTHEME} PRIVATE
         lib_detours
         nlohmann_json::nlohmann_json
         Shlwapi
 )
-set_target_properties(${TARGET_VMHOOK} PROPERTIES
+set_target_properties(${TARGET_VMTHEME} PROPERTIES
         LINK_FLAGS "/EXPORT:DetourFinishHelperProcess,@1"
         OUTPUT_NAME "vmtheme${ARCH_POSTFIX}"
         MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"

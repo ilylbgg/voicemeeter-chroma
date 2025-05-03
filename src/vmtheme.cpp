@@ -67,12 +67,13 @@ typedef LRESULT (__stdcall *o_WndProc_t)(HWND hWnd, UINT Msg, WPARAM wParam, LPA
 typedef struct flavor_info
 {
     std::string specifier;
-    uint32_t bitmap_size{};
+    uint32_t bitmap_size_main{};
+    uint32_t bitmap_size_settings{};
 } flavor_info_t;
 
-static const flavor_info_t flavor_info_default = {"default", 0x1D1036};
-static const flavor_info_t flavor_info_banana = {"banana", 0x1D1036};
-static const flavor_info_t flavor_info_potato = {"potato", 0x39FEC6};
+static const flavor_info_t flavor_info_default = {"default", 0x1D1036, 0x1266FE};
+static const flavor_info_t flavor_info_banana = {"banana", 0x1D1036, 0x1266FE};
+static const flavor_info_t flavor_info_potato = {"potato", 0x39FEC6, 0x1ACA06};
 
 static std::unordered_map<std::wstring, flavor_info_t> flavor_map =
 {
@@ -90,7 +91,8 @@ static std::unordered_map<long, long> font_height_map = {
 };
 
 static flavor_info_t active_flavor;
-static std::vector<uint8_t> bg_bitmap_data;
+static std::vector<uint8_t> bg_main_bitmap_data;
+static std::vector<uint8_t> bg_settings_bitmap_data;
 static bool init_complete = false;
 static json json_colors;
 static o_swap_bg_t o_swap_bg = nullptr;
@@ -199,8 +201,9 @@ PVOID find_function_signature(const signature_t& sig)
 /**
  * Loads the bitmap file from userprofile folder "C:\Users\<User>\Documents\Voicemeeter"
  * @param path Path to bitmap
+ * @param target Target buffer
  */
-void load_bitmap(const std::wstring& path)
+void load_bitmap(const std::wstring& path, std::vector<uint8_t>& target)
 {
     std::ifstream f(path.c_str(), std::ios::binary | std::ios::ate);
 
@@ -209,9 +212,9 @@ void load_bitmap(const std::wstring& path)
 
     std::streampos size = f.tellg();
     f.seekg(0, std::ios::beg);
-    bg_bitmap_data.assign(size, '\0');
+    target.assign(size, '\0');
 
-    if (!f.read(reinterpret_cast<char*>(bg_bitmap_data.data()), size))
+    if (!f.read(reinterpret_cast<char*>(target.data()), size))
         error(L"error reading bitmap");
 }
 
@@ -299,7 +302,8 @@ HANDLE WINAPI hk_CreateMutexA(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bIni
 
         std::wstring active_theme_name_wstr = str_to_wstr(active_theme_name_str);
         std::wstring theme_path = userprofile_path + L"\\themes\\" + str_to_wstr(active_flavor.specifier) + L"\\" + active_theme_name_wstr;
-        load_bitmap(theme_path + L"\\bg.bmp");
+        load_bitmap(theme_path + L"\\bg.bmp", bg_main_bitmap_data);
+        load_bitmap(theme_path + L"\\bg_settings.bmp", bg_settings_bitmap_data);
         std::ifstream color_file(theme_path + L"\\colors.json");
 
         if (!color_file.is_open())
@@ -451,8 +455,11 @@ ATOM WINAPI hk_RegisterClassA(const WNDCLASSA *lpWndClass)
  */
 HBITMAP __fastcall hk_swap_bg(uint8_t* data_ptr, uint32_t size)
 {
-    if (size == active_flavor.bitmap_size)
-        return o_swap_bg(bg_bitmap_data.data(), size);
+    if (size == active_flavor.bitmap_size_main)
+        return o_swap_bg(bg_main_bitmap_data.data(), size);
+
+    if (size == active_flavor.bitmap_size_settings)
+        return o_swap_bg(bg_settings_bitmap_data.data(), size);
 
     return o_swap_bg(data_ptr, size);
 }
@@ -467,11 +474,16 @@ HBITMAP __fastcall hk_swap_bg(uint8_t* data_ptr, uint32_t size)
  */
 void __cdecl hk_swap_bg(uint8_t** ppvBits, uint8_t* data_ptr, uint32_t size)
 {
-    LPBITMAPFILEHEADER bitmap_header = reinterpret_cast<LPBITMAPFILEHEADER>(bg_bitmap_data.data());
-    uint32_t bitmap_data_size = active_flavor.bitmap_size - bitmap_header->bfOffBits;
+    LPBITMAPFILEHEADER bitmap_main_header = reinterpret_cast<LPBITMAPFILEHEADER>(bg_main_bitmap_data.data());
+    LPBITMAPFILEHEADER bitmap_settings_header = reinterpret_cast<LPBITMAPFILEHEADER>(bg_settings_bitmap_data.data());
+    uint32_t bitmap_main_data_size = active_flavor.bitmap_size_main - bitmap_main_header->bfOffBits;
+    uint32_t bitmap_settings_data_size = active_flavor.bitmap_size_settings - bitmap_settings_header->bfOffBits;
 
-    if (size == bitmap_data_size)
-        return o_swap_bg(ppvBits, &bg_bitmap_data[bitmap_header->bfOffBits], bitmap_data_size);
+    if (size == bitmap_main_data_size)
+        return o_swap_bg(ppvBits, &bg_main_bitmap_data[bitmap_main_header->bfOffBits], bitmap_main_data_size);
+
+    if (size == bitmap_settings_data_size)
+        return o_swap_bg(ppvBits, &bg_settings_bitmap_data[bitmap_settings_header->bfOffBits], bitmap_settings_data_size);
 
     return o_swap_bg(ppvBits, data_ptr, size);
 }
