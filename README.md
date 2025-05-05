@@ -33,7 +33,7 @@ Tested with Windows 10/11 and versions `1.1.1.9`, `2.1.1.9`, `3.1.1.9` of the so
 
 ## Supported themes
 
-[Catppucchin Macchiatio (currently only Banana)](https://github.com/emkaix/voicemeeter-theme-catppuccin-macchiato)
+[Catppucchin Macchiato (currently only Banana)](https://github.com/emkaix/voicemeeter-theme-catppuccin-macchiato)
 
 ## Build
 
