@@ -1,11 +1,13 @@
 # Voicemeeter Themes Mod
 
-Enables theming support for all Voicemeeter versions.
+Enables theming support for Voicemeeter, Voicemeeter Banana and Voicemeeter Potato.
 
 ![UI](https://github.com/emkaix/voicemeeter-theme-catppuccin-macchiato/blob/main/banana.png?raw=true)
 
 - [Disclaimer](#disclaimer)
+- [Status](#status)
 - [Getting started](#getting-started)
+- [Supported themes](#supported-themes)
 - [Build](#build)
 - [FAQ](#frequently-asked-questions)
 - [Dependencies](#dependencies)
@@ -17,15 +19,21 @@ Enables theming support for all Voicemeeter versions.
 
 :heavy_exclamation_mark: **If you have any problems related to or caused by this mod, you will not get any support whatsoever on the Voicemeeter forums or the Voicemeeter Discord.**
 
+## Status
+
+Tested with Windows 10/11 and versions `1.1.1.9`, `2.1.1.9`, `3.1.1.9` of the software (older versions may work as well).
 
 ## Getting started
 
 1. [Build the project from source](#build).
 2. Copy `vmtheme64.dll`/`vmtheme32.dll` into `C:\Program Files (x86)\VB\Voicemeeter\`
-3. Choose a supported theme and place it in `C:\Users\<USER>\Documents\Voicemeeter\themes\`
-4. Set the active theme in `theme.json`.
+3. Choose a [supported theme](#supported-themes) and place it in `C:\Users\<USER>\Documents\Voicemeeter\themes\`
+4. Set the active theme in `C:\Users\<USER>\Documents\Voicemeeter\theme.json`.
 5. Launch Voicemeeter with the launcher. The name depends on your build target, for Banana x64 the name is `vmtheme64-banana.exe`.
 
+## Supported themes
+
+[Catppucchin Macchiatio (currently only Banana)](https://github.com/emkaix/voicemeeter-theme-catppuccin-macchiato)
 
 ## Build
 
@@ -79,7 +87,7 @@ No, this is a completely unofficial mod that is not affiliated with Voicemeeter 
 ### How does it work?
 
 The launcher injects a DLL into the Voicemeeter process that hooks (= intercepts) some Windows API functions responsible for drawing on the application surface. This includes: [CreatePen](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createpen), [CreateBrushIndirect](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createbrushindirect) and [SetTextColor](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-settextcolor), among others. It also hooks a specific function in order to swap out the background bitmap.
-Hooking is done using the Microsoft Detours library: https://github.com/microsoft/Detours
+Hooking is done using the Microsoft Detours library: https://github.com/microsoft/Detours/wiki
 
 ### Does it modify the Voicemeeter executable on disk?
 
@@ -92,8 +100,8 @@ No, the original files are completely untouched. The vmtheme launcher simply lau
 
 ### Does using this mod alone give me a themed Voicemeeter?
 
-No, this mod only enables theme support. You also need to download a supported theme separately, for example this one: https://github.com/emkaix/voicemeeter-theme-catppuccin-macchiato
-
+No, this mod only enables theme support. You also need to download a supported theme separately, see [Supported themes](#supported-themes).
+         
 ### How do I make my own theme?
 
 TODO
