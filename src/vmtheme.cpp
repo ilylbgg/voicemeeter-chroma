@@ -71,7 +71,7 @@ typedef struct flavor_info
     uint32_t bitmap_size_settings{};
 } flavor_info_t;
 
-static const flavor_info_t flavor_info_default = {"default", 0x1D1036, 0x1266FE};
+static const flavor_info_t flavor_info_default = {"default", 0x1D1036, 0xAD70E};
 static const flavor_info_t flavor_info_banana = {"banana", 0x1D1036, 0x1266FE};
 static const flavor_info_t flavor_info_potato = {"potato", 0x39FEC6, 0x1ACA06};
 
