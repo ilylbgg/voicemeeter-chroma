@@ -412,7 +412,7 @@ LRESULT __stdcall hk_WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 #endif
 {
     if (Msg == WM_COMMAND && LOWORD(wParam) == 0x1337)
-        ShellExecute(nullptr, L"open", L"https://github.com/emkaix/voicemeeter-themes", nullptr, nullptr, SW_SHOW);
+        ShellExecute(nullptr, L"open", L"https://github.com/emkaix/voicemeeter-themes-mod", nullptr, nullptr, SW_SHOW);
 
     return o_WndProc(hWnd, Msg, wParam, lParam);
 }
