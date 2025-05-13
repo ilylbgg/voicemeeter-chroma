@@ -37,7 +37,8 @@ static BOOL (WINAPI *o_AppendMenuA)(HMENU hMenu, UINT uFlags, UINT_PTR uIDNewIte
 static HPEN (WINAPI *o_CreatePen)(int iStyle, int cWidth, COLORREF color) = CreatePen;
 static HBRUSH (WINAPI *o_CreateBrushIndirect)(const LOGBRUSH* plbrush) = CreateBrushIndirect;
 static COLORREF (WINAPI *o_SetTextColor)(HDC hdc, COLORREF color) = SetTextColor;
-static ATOM (WINAPI *o_RegisterClassA)(const WNDCLASSA *lpWndClass) = RegisterClassA;
+static ATOM (WINAPI *o_RegisterClassA)(const WNDCLASSA* lpWndClass) = RegisterClassA;
+static BOOL (WINAPI *o_Rectangle)(HDC hdc, int left, int top, int right, int bottom) = Rectangle;
 
 //******************//
 //      CUSTOM      //
@@ -64,16 +65,19 @@ typedef LRESULT (__stdcall *o_WndProc_t)(HWND hWnd, UINT Msg, WPARAM wParam, LPA
 //      GLOBALS     //
 //******************//
 
+const enum flavor_id { DEFAULT, BANANA, POTATO };
+
 typedef struct flavor_info
 {
-    std::string specifier;
+    std::string name;
+    flavor_id id;
     uint32_t bitmap_size_main{};
     uint32_t bitmap_size_settings{};
 } flavor_info_t;
 
-static const flavor_info_t flavor_info_default = {"default", 0x1D1036, 0xAD70E};
-static const flavor_info_t flavor_info_banana = {"banana", 0x1D1036, 0x1266FE};
-static const flavor_info_t flavor_info_potato = {"potato", 0x39FEC6, 0x1ACA06};
+static const flavor_info_t flavor_info_default = {"default", DEFAULT, 0x1D1036, 0xAD70E};
+static const flavor_info_t flavor_info_banana = {"banana", BANANA, 0x1D1036, 0x1266FE};
+static const flavor_info_t flavor_info_potato = {"potato", POTATO, 0x39FEC6, 0x1ACA06};
 
 static std::unordered_map<std::wstring, flavor_info_t> flavor_map =
 {
@@ -87,7 +91,7 @@ static std::unordered_map<std::wstring, flavor_info_t> flavor_map =
 
 static std::unordered_map<long, long> font_height_map = {
     {20, 18}, // input custom label
-    {16, 15}  // master section fader
+    {16, 15} // master section fader
 };
 
 static flavor_info_t active_flavor;
@@ -285,7 +289,7 @@ HANDLE WINAPI hk_CreateMutexA(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bIni
 
         active_flavor = flavor_map[executable_name.c_str()];
 
-        if (active_flavor.specifier.empty())
+        if (active_flavor.name.empty())
             error(L"error flavor_map");
 
         userprofile_path = get_userprofile_path();
@@ -295,13 +299,13 @@ HANDLE WINAPI hk_CreateMutexA(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bIni
             error(L"error opening theme.json");
 
         json json_theme = json::parse(theme_file);
-        std::string active_theme_name_str = json_theme[active_flavor.specifier].get<std::string>();
+        std::string active_theme_name_str = json_theme[active_flavor.name].get<std::string>();
 
         if (active_theme_name_str.empty())
             error(L"error no theme in json");
 
         std::wstring active_theme_name_wstr = str_to_wstr(active_theme_name_str);
-        std::wstring theme_path = userprofile_path + L"\\themes\\" + str_to_wstr(active_flavor.specifier) + L"\\" + active_theme_name_wstr;
+        std::wstring theme_path = userprofile_path + L"\\themes\\" + str_to_wstr(active_flavor.name) + L"\\" + active_theme_name_wstr;
         load_bitmap(theme_path + L"\\bg.bmp", bg_main_bitmap_data);
         load_bitmap(theme_path + L"\\bg_settings.bmp", bg_settings_bitmap_data);
         std::ifstream color_file(theme_path + L"\\colors.json");
@@ -421,7 +425,7 @@ LRESULT __stdcall hk_WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
  * We hook this function in order to get the address of WndProc from the lpWndClass pointer, so we can hook WndProc
  * See https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerclassa
  */
-ATOM WINAPI hk_RegisterClassA(const WNDCLASSA *lpWndClass)
+ATOM WINAPI hk_RegisterClassA(const WNDCLASSA* lpWndClass)
 {
     if (std::strcmp(lpWndClass->lpszClassName, "VBCABLE0Voicemeeter0MainWindow0") == 0)
     {
@@ -443,6 +447,21 @@ ATOM WINAPI hk_RegisterClassA(const WNDCLASSA *lpWndClass)
     return o_RegisterClassA(lpWndClass);
 }
 
+BOOL WINAPI hk_Rectangle(HDC hdc, int left, int top, int right, int bottom)
+{
+    // printf("%d %d\n", left, top);
+    if (active_flavor.id == POTATO)
+    {
+        if ((left == 1469 && top == 15) || // box inside menu button
+            (left == 1221 && top == 581) || // bus fader box
+            (left == 1159 && top == 581) || // bus fader box
+            (left == 1345 && top == 581) || // bus fader box
+            (left == 1283 && top == 581)) // bus fader box
+            return true;
+    }
+
+    return o_Rectangle(hdc, left, top, right, bottom);
+}
 
 #if defined(_WIN64)
 /**
@@ -533,6 +552,9 @@ void init_hooks()
     if (DetourAttach(&reinterpret_cast<PVOID&>(o_RegisterClassA), hk_RegisterClassA))
         error(L"error DetourAttach");
 
+    if (DetourAttach(&reinterpret_cast<PVOID&>(o_Rectangle), hk_Rectangle))
+        error(L"error DetourAttach");
+
     if (DetourAttach(&reinterpret_cast<PVOID&>(o_swap_bg), hk_swap_bg) != NO_ERROR)
         error(L"error DetourAttach");
 
@@ -570,6 +592,9 @@ void cleanup_hooks()
         error(L"error DetourDetach");
 
     if (DetourDetach(&reinterpret_cast<PVOID&>(o_RegisterClassA), hk_RegisterClassA))
+        error(L"error DetourDetach");
+
+    if (DetourDetach(&reinterpret_cast<PVOID&>(o_Rectangle), hk_Rectangle))
         error(L"error DetourDetach");
 
     if (o_WndProc != nullptr && DetourDetach(&reinterpret_cast<PVOID&>(o_WndProc), hk_WndProc) != NO_ERROR)
