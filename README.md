@@ -2,6 +2,7 @@
 
 Enables theming support for Voicemeeter, Voicemeeter Banana and Voicemeeter Potato.
 
+![UI](https://raw.githubusercontent.com/emkaix/voicemeeter-theme-catppuccin-mocha/refs/heads/main/potato.png)
 ![UI](https://github.com/emkaix/voicemeeter-theme-catppuccin-macchiato/blob/main/banana.png?raw=true)
 
 - [Disclaimer](#disclaimer)
@@ -34,6 +35,7 @@ Tested with Windows 10/11 and versions `1.1.1.9`, `2.1.1.9`, `3.1.1.9` of the so
 ## Supported themes
 
 [Catppucchin Macchiato (currently only Banana)](https://github.com/emkaix/voicemeeter-theme-catppuccin-macchiato)
+[Catppucchin Mocha (currently only Potato)](https://github.com/emkaix/voicemeeter-theme-catppuccin-mocha)
 
 ## Build
 
