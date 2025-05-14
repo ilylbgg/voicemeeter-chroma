@@ -447,9 +447,14 @@ ATOM WINAPI hk_RegisterClassA(const WNDCLASSA* lpWndClass)
     return o_RegisterClassA(lpWndClass);
 }
 
+/**
+ * We hook this function to disable drawing specific rectangles that are supposed to mask the background
+ * See https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-rectangle
+ */
 BOOL WINAPI hk_Rectangle(HDC hdc, int left, int top, int right, int bottom)
 {
     // printf("%d %d\n", left, top);
+
     if (active_flavor.id == POTATO)
     {
         if ((left == 1469 && top == 15) || // box inside menu button
@@ -458,6 +463,16 @@ BOOL WINAPI hk_Rectangle(HDC hdc, int left, int top, int right, int bottom)
             (left == 1345 && top == 581) || // bus fader box
             (left == 1283 && top == 581)) // bus fader box
             return true;
+    }
+
+    if (active_flavor.id == BANANA)
+    {
+        if ((left == 848 && top == 15) || // box inside menu button
+            (left == 789 && top == 432) || // bus fader box
+            (left == 727 && top == 432) || // bus fader box
+            (left == 913 && top == 432) || // bus fader box
+            (left == 851 && top == 432)) // bus fader box
+                return true;
     }
 
     return o_Rectangle(hdc, left, top, right, bottom);
@@ -546,13 +561,13 @@ void init_hooks()
     if (DetourAttach(&reinterpret_cast<PVOID&>(o_CreateBrushIndirect), hk_CreateBrushIndirect) != NO_ERROR)
         error(L"error DetourAttach");
 
-    if (DetourAttach(&reinterpret_cast<PVOID&>(o_SetTextColor), hk_SetTextColor))
+    if (DetourAttach(&reinterpret_cast<PVOID&>(o_SetTextColor), hk_SetTextColor) != NO_ERROR)
         error(L"error DetourAttach");
 
-    if (DetourAttach(&reinterpret_cast<PVOID&>(o_RegisterClassA), hk_RegisterClassA))
+    if (DetourAttach(&reinterpret_cast<PVOID&>(o_RegisterClassA), hk_RegisterClassA) != NO_ERROR)
         error(L"error DetourAttach");
 
-    if (DetourAttach(&reinterpret_cast<PVOID&>(o_Rectangle), hk_Rectangle))
+    if (DetourAttach(&reinterpret_cast<PVOID&>(o_Rectangle), hk_Rectangle) != NO_ERROR)
         error(L"error DetourAttach");
 
     if (DetourAttach(&reinterpret_cast<PVOID&>(o_swap_bg), hk_swap_bg) != NO_ERROR)
@@ -588,13 +603,13 @@ void cleanup_hooks()
     if (DetourDetach(&reinterpret_cast<PVOID&>(o_CreateBrushIndirect), hk_CreateBrushIndirect) != NO_ERROR)
         error(L"error DetourDetach");
 
-    if (DetourDetach(&reinterpret_cast<PVOID&>(o_SetTextColor), hk_SetTextColor))
+    if (DetourDetach(&reinterpret_cast<PVOID&>(o_SetTextColor), hk_SetTextColor) != NO_ERROR)
         error(L"error DetourDetach");
 
-    if (DetourDetach(&reinterpret_cast<PVOID&>(o_RegisterClassA), hk_RegisterClassA))
+    if (DetourDetach(&reinterpret_cast<PVOID&>(o_RegisterClassA), hk_RegisterClassA) != NO_ERROR)
         error(L"error DetourDetach");
 
-    if (DetourDetach(&reinterpret_cast<PVOID&>(o_Rectangle), hk_Rectangle))
+    if (DetourDetach(&reinterpret_cast<PVOID&>(o_Rectangle), hk_Rectangle) != NO_ERROR)
         error(L"error DetourDetach");
 
     if (o_WndProc != nullptr && DetourDetach(&reinterpret_cast<PVOID&>(o_WndProc), hk_WndProc) != NO_ERROR)
