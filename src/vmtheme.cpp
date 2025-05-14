@@ -230,11 +230,11 @@ std::wstring get_userprofile_path()
 {
     PWSTR buffer = nullptr;
 
-    if (SHGetKnownFolderPath(FOLDERID_Profile, 0, nullptr, &buffer) != S_OK)
+    if (SHGetKnownFolderPath(FOLDERID_Documents, 0, nullptr, &buffer) != S_OK)
         error(L"SHGetKnownFolderPath");
 
     std::wstring userprofile_path = buffer;
-    userprofile_path += L"\\Documents\\Voicemeeter";
+    userprofile_path += L"\\Voicemeeter";
     CoTaskMemFree(buffer);
 
     return userprofile_path;
