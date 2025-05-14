@@ -36,7 +36,7 @@ Tested with Windows 10/11 and versions `1.1.1.9`, `2.1.1.9`, `3.1.1.9` of the so
 
 [Catppucchin Macchiato (currently only Banana)](https://github.com/emkaix/voicemeeter-theme-catppuccin-macchiato)
 
-[Catppucchin Mocha (currently only Potato)](https://github.com/emkaix/voicemeeter-theme-catppuccin-mocha)
+[Catppucchin Mocha (Banana & Potato)](https://github.com/emkaix/voicemeeter-theme-catppuccin-mocha)
 
 ## Build
 
