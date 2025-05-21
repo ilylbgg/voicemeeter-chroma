@@ -115,6 +115,9 @@ Due to the nature of the mod, specifically function hooking and DLL injection, s
 no easy way for me to proof to you that prebuilt binaries are *actually* built from the source you see here on Github, it's in your best interest to make sure the source code is sound and then compile it yourself.
 I don't recommend using this project (or any similar project for that matter) if you are unsure about this and/or can't verify the source code yourself.
 
+### I built the project for a specific Voicemeeter target, but now I get an error when I try to build for another
+
+Delete the existing `out` folder and run both CMake commands again.
 
 ## Dependencies
 
