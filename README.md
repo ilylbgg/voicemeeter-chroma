@@ -15,10 +15,9 @@ Enables theming support for Voicemeeter, Voicemeeter Banana and Voicemeeter Pota
 
 ## Disclaimer
 
-:heavy_exclamation_mark: **This project is an unofficial, third-party, independent modification of Voicemeeter. It is not affiliated with, endorsed by, or in any way officially connected to VB-Audio Software or any of its subsidiaries or affiliates. All trademarks, service marks, and copyrights related to Voicemeeter are the property of VB-Audio Software.**
+:heavy_exclamation_mark: **This project is an unofficial, third-party, independent modification of Voicemeeter. It is not affiliated with, endorsed by, or in any way officially connected to VB-Audio Software or any of its subsidiaries or affiliates. All trademarks, service marks, and copyrights related to Voicemeeter are the property of VB-Audio Software. If you have any problems related to or caused by this mod, you will not get any support whatsoever on the Voicemeeter forums or the Voicemeeter Discord.**
 
-
-:heavy_exclamation_mark: **If you have any problems related to or caused by this mod, you will not get any support whatsoever on the Voicemeeter forums or the Voicemeeter Discord.**
+:heavy_exclamation_mark: **For any problems or bugs please create an issue here on Github or ask on the dedicated [Discord server](https://discord.gg/MdpWZGqm).**
 
 ## Status
 
