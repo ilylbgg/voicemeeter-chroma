@@ -1,5 +1,7 @@
 .idea/
 cmake-build-*/
-resources/
-external/detours
-external/json
+external/
+build32/
+build64/
+out/setdll*
+out/vmtheme*

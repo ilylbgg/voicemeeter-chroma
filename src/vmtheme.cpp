@@ -15,17 +15,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <windows.h>
-#include <detours.h>
-#include <fstream>
-#include <psapi.h>
-#include <shlobj.h>
-#include <shlwapi.h>
-#include <sstream>
-#include <nlohmann/json.hpp>
-#include "shared.h"
 
-using json = nlohmann::json;
+#include "utils.h"
+
 
 //******************//
 //      WINAPI      //
@@ -44,12 +36,6 @@ static BOOL (WINAPI *o_Rectangle)(HDC hdc, int left, int top, int right, int bot
 //      CUSTOM      //
 //******************//
 
-typedef struct signature
-{
-    const std::vector<uint8_t> pattern;
-    const char* mask;
-} signature_t;
-
 // signatures are stable between VM flavors and only differ for architecture (32/64bit)
 #if defined(_WIN64)
 static signature_t sig_swap_bg = {{0x4C, 0x8B, 0xDC, 0x49, 0x89, 0x5B, 0x20, 0x56, 0x48, 0x83}, {"xxxxxxxxxx"}};
@@ -65,28 +51,15 @@ typedef LRESULT (__stdcall *o_WndProc_t)(HWND hWnd, UINT Msg, WPARAM wParam, LPA
 //      GLOBALS     //
 //******************//
 
-const enum flavor_id { DEFAULT, BANANA, POTATO };
+static const flavor_info_t flavor_info_default = {"default", FLAVOR_DEFAULT, 0x1D1036, 0xAD70E};
+static const flavor_info_t flavor_info_banana = {"banana", FLAVOR_BANANA, 0x1D1036, 0x1266FE};
+static const flavor_info_t flavor_info_potato = {"potato", FLAVOR_POTATO, 0x39FEC6, 0x1ACA06};
 
-typedef struct flavor_info
+static std::unordered_map<flavor_id, flavor_info_t> flavor_map =
 {
-    std::string name;
-    flavor_id id;
-    uint32_t bitmap_size_main{};
-    uint32_t bitmap_size_settings{};
-} flavor_info_t;
-
-static const flavor_info_t flavor_info_default = {"default", DEFAULT, 0x1D1036, 0xAD70E};
-static const flavor_info_t flavor_info_banana = {"banana", BANANA, 0x1D1036, 0x1266FE};
-static const flavor_info_t flavor_info_potato = {"potato", POTATO, 0x39FEC6, 0x1ACA06};
-
-static std::unordered_map<std::wstring, flavor_info_t> flavor_map =
-{
-    {L"voicemeeter_x64.exe", flavor_info_default},
-    {L"voicemeeter.exe", flavor_info_default},
-    {L"voicemeeterpro_x64.exe", flavor_info_banana},
-    {L"voicemeeterpro.exe", flavor_info_banana},
-    {L"voicemeeter8x64.exe", flavor_info_potato},
-    {L"voicemeeter8.exe", flavor_info_potato}
+    {FLAVOR_DEFAULT, flavor_info_default},
+    {FLAVOR_BANANA, flavor_info_banana},
+    {FLAVOR_POTATO, flavor_info_potato},
 };
 
 static std::unordered_map<long, long> font_height_map = {
@@ -97,179 +70,22 @@ static std::unordered_map<long, long> font_height_map = {
 static flavor_info_t active_flavor;
 static std::vector<uint8_t> bg_main_bitmap_data;
 static std::vector<uint8_t> bg_settings_bitmap_data;
-static bool init_complete = false;
-static json json_colors;
+static bool init_entered = false;
+static YAML::Node yaml_colors;
 static o_swap_bg_t o_swap_bg = nullptr;
 static o_WndProc_t o_WndProc = nullptr;
-static std::wstring userprofile_path;
 
-//******************//
-// HELPER FUNCTIONS //
-//******************//
-
-/**
- * Convert COLORREF (BBGGRR) to RGB hex string (#RRGGBB)
- * See https://learn.microsoft.com/en-us/windows/win32/gdi/colorref
- * @param color The color in COLORREF format
- * @return The color as hex string
- */
-std::string colorref_to_hex(const COLORREF color)
-{
-    std::stringstream ss;
-    ss << '#' << std::uppercase << std::hex
-        << std::setw(2) << std::setfill('0') << static_cast<int>(GetRValue(color))
-        << std::setw(2) << std::setfill('0') << static_cast<int>(GetGValue(color))
-        << std::setw(2) << std::setfill('0') << static_cast<int>(GetBValue(color));
-
-    return ss.str();
-}
-
-/**
- * Convert RGB hex string (#RRGGBB) to COLORREF (BBGGRR)
- * See https://learn.microsoft.com/en-us/windows/win32/gdi/colorref
- * @param hex The color as hex string
- * @return The color in COLORREF format
- */
-COLORREF hex_to_colorref(const std::string& hex)
-{
-    if (hex.empty())
-        error(L"error empty color value");
-
-    std::string clean_hex = (hex[0] == '#') ? hex.substr(1) : hex;
-
-    if (clean_hex.length() != 6)
-        error(L"invalid color value");
-
-    unsigned long value = 0;
-
-    try
-    {
-        value = std::stoul(clean_hex, nullptr, 16);
-    }
-    catch (...)
-    {
-        error(L"invalid color value");
-    }
-
-    uint8_t r = (value >> 16) & 0xFF;
-    uint8_t g = (value >> 8) & 0xFF;
-    uint8_t b = value & 0xFF;
-
-    return RGB(r, g, b);
-}
-
-/**
- * Find non-exported functions using signature scanning
- * Function signatures should be stable across updates
- * Simple O(n*m) implementation
- * @param sig A signature struct containing the byte pattern and a mask
- * @return The absolute address of the function
- */
-PVOID find_function_signature(const signature_t& sig)
-{
-    HMODULE h_module = GetModuleHandle(nullptr);
-    MODULEINFO mod_info;
-
-    if (!h_module)
-        error(L"error GetModuleHandle");
-
-    if (!GetModuleInformation(GetCurrentProcess(), h_module, &mod_info, sizeof(mod_info)))
-        error(L"error GetModuleInformation");
-
-    uint8_t* start = static_cast<uint8_t*>(mod_info.lpBaseOfDll);
-    size_t end = mod_info.SizeOfImage;
-    size_t pattern_size = sig.pattern.size();
-    const uint8_t* pattern = sig.pattern.data();
-    const char* mask = sig.mask;
-
-    for (size_t i = 0; i < end - pattern_size; i++)
-    {
-        bool found = true;
-
-        for (size_t j = 0; j < pattern_size; j++)
-        {
-            if (mask[j] != '?' && pattern[j] != start[i + j])
-            {
-                found = false;
-                break;
-            }
-        }
-
-        if (found)
-            return start + i;
-    }
-
-    return nullptr;
-}
-
-/**
- * Loads the bitmap file from userprofile folder "C:\Users\<User>\Documents\Voicemeeter"
- * @param path Path to bitmap
- * @param target Target buffer
- */
-void load_bitmap(const std::wstring& path, std::vector<uint8_t>& target)
-{
-    std::ifstream f(path.c_str(), std::ios::binary | std::ios::ate);
-
-    if (!f.is_open())
-        error(L"error opening bitmap");
-
-    std::streampos size = f.tellg();
-    f.seekg(0, std::ios::beg);
-    target.assign(size, '\0');
-
-    if (!f.read(reinterpret_cast<char*>(target.data()), size))
-        error(L"error reading bitmap");
-}
-
-/**
- * Gets the path to the Voicemeeter user directory
- * @return Path to VM directory
- */
-std::wstring get_userprofile_path()
-{
-    PWSTR buffer = nullptr;
-
-    if (SHGetKnownFolderPath(FOLDERID_Documents, 0, nullptr, &buffer) != S_OK)
-        error(L"SHGetKnownFolderPath");
-
-    std::wstring userprofile_path = buffer;
-    userprofile_path += L"\\Voicemeeter";
-    CoTaskMemFree(buffer);
-
-    return userprofile_path;
-}
-
-/**
- * Gets a color value from the json in a case-insensitive way
- * @param arg_col The color value in upper case
- * @param category Can either be "shapes" or "text"
- * @return The mapped color value for the current theme
- */
-std::optional<std::string> get_json_color(const std::string& arg_col, const std::string& category)
-{
-    for (auto& [k, v] : json_colors[category.c_str()].items())
-    {
-        std::string temp(k.size(), '\0');
-        std::transform(k.begin(), k.end(), temp.begin(), ::toupper);
-
-        if (temp == arg_col)
-        {
-            std::string res = v["value"].get<std::string>();
-
-            if (!res.empty())
-                return res;
-
-            return std::nullopt;
-        }
-    }
-
-    return std::nullopt;
-}
+static constexpr std::wstring_view BM_FILE_BG = L"bg.bmp";
+static constexpr std::wstring_view BM_FILE_BG_SETTINGS = L"bg_settings.bmp";
+static constexpr std::wstring_view CONFIG_FILE_THEME = L"theme.yaml";
+static constexpr std::wstring_view CONFIG_FILE_COLORS = L"colors.yaml";
+static constexpr std::string_view VM_MAINWINDOW_CLASSNAME = "VBCABLE0Voicemeeter0MainWindow0";
 
 //*****************************//
 //      HOOKED FUNCTIONS       //
 //*****************************//
+
+bool apply_hooks();
 
 /**
  * We hook this function to initialize the theme, because it gets called early in WinMain and is exported
@@ -278,43 +94,148 @@ std::optional<std::string> get_json_color(const std::string& arg_col, const std:
  */
 HANDLE WINAPI hk_CreateMutexA(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCSTR lpName)
 {
-    if (!init_complete)
+    if (!init_entered)
     {
-        std::wstring executable_name(MAX_PATH, '\0');
+        init_entered = true;
+        utils::setup_logging();
+        spdlog::info("###################################");
+        spdlog::info("vmtheme init start");
+        std::optional<flavor_id> flavor_id = utils::get_flavor_id();
 
-        if (!GetModuleFileName(nullptr, executable_name.data(), MAX_PATH))
-            error(L"error GetModuleFileName");
+        if (!flavor_id)
+        {
+            spdlog::error("can't get Voicemeeter flavor from version info");
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
 
-        PathStripPath(const_cast<LPWSTR>(executable_name.c_str()));
+        active_flavor = flavor_map.find(*flavor_id)->second;
 
-        active_flavor = flavor_map[executable_name.c_str()];
+        auto userprofile_path = utils::get_userprofile_path();
 
-        if (active_flavor.name.empty())
-            error(L"error flavor_map");
+        if (!userprofile_path)
+        {
+            spdlog::error("can't get userprofile path");
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
 
-        userprofile_path = get_userprofile_path();
-        std::ifstream theme_file(userprofile_path + L"\\theme.json");
+        spdlog::info("userprofile path is: {}", *utils::wstr_to_str(*userprofile_path));
+
+        if (!std::filesystem::exists(std::filesystem::path(*userprofile_path) / CONFIG_FILE_THEME))
+        {
+            spdlog::error("{} not found", *utils::wstr_to_str(CONFIG_FILE_THEME.data()));
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
+
+        std::ifstream theme_file(std::filesystem::path(*userprofile_path) / CONFIG_FILE_THEME);
 
         if (!theme_file.is_open())
-            error(L"error opening theme.json");
+        {
+            spdlog::error("can't open {}", *utils::wstr_to_str(CONFIG_FILE_THEME.data()));
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
 
-        json json_theme = json::parse(theme_file);
-        std::string active_theme_name_str = json_theme[active_flavor.name].get<std::string>();
+        YAML::Node yaml_theme;
+
+        try
+        {
+            yaml_theme = YAML::Load(theme_file);
+        }
+        catch (YAML::ParserException& ex)
+        {
+            spdlog::error("failed to parse {}", *utils::wstr_to_str(CONFIG_FILE_THEME.data()));
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
+
+        if (!yaml_theme[active_flavor.name])
+        {
+            spdlog::error("current Voicemeeter flavor is not found in {}", *utils::wstr_to_str(CONFIG_FILE_THEME.data()));
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
+
+        std::string active_theme_name_str = yaml_theme[active_flavor.name].as<std::string>();
 
         if (active_theme_name_str.empty())
-            error(L"error no theme in json");
+        {
+            spdlog::error("no theme specified in {} for current Voicemeeter flavor", *utils::wstr_to_str(CONFIG_FILE_THEME.data()));
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
 
-        std::wstring active_theme_name_wstr = str_to_wstr(active_theme_name_str);
-        std::wstring theme_path = userprofile_path + L"\\themes\\" + str_to_wstr(active_flavor.name) + L"\\" + active_theme_name_wstr;
-        load_bitmap(theme_path + L"\\bg.bmp", bg_main_bitmap_data);
-        load_bitmap(theme_path + L"\\bg_settings.bmp", bg_settings_bitmap_data);
-        std::ifstream color_file(theme_path + L"\\colors.json");
+        auto active_theme_name_wstr = utils::str_to_wstr(active_theme_name_str);
 
-        if (!color_file.is_open())
-            error(L"error opening colors.json");
+        if (!active_theme_name_wstr)
+        {
+            spdlog::error("active_theme_name_str conversion error");
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
 
-        json_colors = json::parse(color_file);
-        init_complete = true;
+        auto active_flavor_name = utils::str_to_wstr(active_flavor.name);
+
+        if (!active_flavor_name)
+        {
+            spdlog::error("active_flavor.name conversion error");
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
+
+        std::wstring theme_path = (std::filesystem::path(*userprofile_path) / L"themes" / *active_flavor_name / *active_theme_name_wstr);
+
+        if (!std::filesystem::exists(std::filesystem::path(theme_path) / BM_FILE_BG))
+        {
+            spdlog::error("can't find {} in themes folder", *utils::wstr_to_str(BM_FILE_BG.data()));
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
+
+        if (!utils::load_bitmap(std::filesystem::path(theme_path) / BM_FILE_BG, bg_main_bitmap_data))
+        {
+            spdlog::error("error loading {}", *utils::wstr_to_str(BM_FILE_BG.data()));
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
+
+        if (!std::filesystem::exists(std::filesystem::path(theme_path) / BM_FILE_BG_SETTINGS))
+        {
+            spdlog::error("can't find {} in themes folder", *utils::wstr_to_str(BM_FILE_BG_SETTINGS.data()));
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
+
+        if (!utils::load_bitmap(std::filesystem::path(theme_path) / BM_FILE_BG_SETTINGS, bg_settings_bitmap_data))
+        {
+            spdlog::error("error loading {}", *utils::wstr_to_str(BM_FILE_BG_SETTINGS.data()));
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
+
+        if (!std::filesystem::exists(std::filesystem::path(theme_path) / CONFIG_FILE_COLORS))
+        {
+            spdlog::error("can't find {}", *utils::wstr_to_str(CONFIG_FILE_COLORS.data()));
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
+
+        std::ifstream colors_file(std::filesystem::path(theme_path) / CONFIG_FILE_COLORS);
+
+        if (!colors_file.is_open())
+        {
+            spdlog::error("can't open {}", *utils::wstr_to_str(CONFIG_FILE_COLORS.data()));
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
+
+        try
+        {
+            yaml_colors = YAML::Load(colors_file);
+        }
+        catch (YAML::ParserException& ex)
+        {
+            spdlog::error("failed to parse {}", *utils::wstr_to_str(CONFIG_FILE_COLORS.data()));
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
+
+        spdlog::info("vmtheme init success");
+        spdlog::info("finish hooking...");
+
+        if (!apply_hooks())
+        {
+            spdlog::error("hooking failed");
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
+
+        spdlog::info("hooking success");
     }
 
     return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
@@ -360,10 +281,11 @@ BOOL WINAPI hk_AppendMenuA(HMENU hMenu, UINT uFlags, UINT_PTR uIDNewItem, LPCSTR
  */
 HPEN WINAPI hk_CreatePen(int iStyle, int cWidth, COLORREF color)
 {
-    std::optional<std::string> new_col = get_json_color(colorref_to_hex(color), "shapes");
-
-    if (new_col)
-        color = hex_to_colorref(*new_col);
+    if (auto new_col = utils::get_yaml_color(yaml_colors, utils::colorref_to_hex(color), CATEGORY_SHAPES))
+    {
+        if (auto new_col_colorref = utils::hex_to_colorref(*new_col))
+            color = *new_col_colorref;
+    }
 
     return o_CreatePen(iStyle, cWidth, color);
 }
@@ -376,10 +298,11 @@ HPEN WINAPI hk_CreatePen(int iStyle, int cWidth, COLORREF color)
  */
 HBRUSH WINAPI hk_CreateBrushIndirect(LOGBRUSH* plbrush)
 {
-    std::optional<std::string> new_col = get_json_color(colorref_to_hex(plbrush->lbColor), "shapes");
-
-    if (new_col)
-        plbrush->lbColor = hex_to_colorref(*new_col);
+    if (std::optional<std::string> new_col = utils::get_yaml_color(yaml_colors, utils::colorref_to_hex(plbrush->lbColor), CATEGORY_SHAPES))
+    {
+        if (auto new_col_colorref = utils::hex_to_colorref(*new_col))
+            plbrush->lbColor = *new_col_colorref;
+    }
 
     return o_CreateBrushIndirect(plbrush);
 }
@@ -392,10 +315,11 @@ HBRUSH WINAPI hk_CreateBrushIndirect(LOGBRUSH* plbrush)
  */
 COLORREF WINAPI hk_SetTextColor(HDC hdc, COLORREF color)
 {
-    std::optional<std::string> new_col = get_json_color(colorref_to_hex(color), "text");
-
-    if (new_col)
-        color = hex_to_colorref(*new_col);
+    if (std::optional<std::string> new_col = utils::get_yaml_color(yaml_colors, utils::colorref_to_hex(color), CATEGORY_TEXT))
+    {
+        if (auto new_col_colorref = utils::hex_to_colorref(*new_col))
+            color = *new_col_colorref;
+    }
 
     return o_SetTextColor(hdc, color);
 }
@@ -427,21 +351,24 @@ LRESULT __stdcall hk_WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
  */
 ATOM WINAPI hk_RegisterClassA(const WNDCLASSA* lpWndClass)
 {
-    if (std::strcmp(lpWndClass->lpszClassName, "VBCABLE0Voicemeeter0MainWindow0") == 0)
+    if (lpWndClass->lpszClassName == VM_MAINWINDOW_CLASSNAME)
     {
+        spdlog::info("hook WndProc...");
         o_WndProc = lpWndClass->lpfnWndProc;
 
         if (DetourTransactionBegin() != NO_ERROR)
-            error(L"error DetourTransactionBegin");
+            return false;
 
         if (DetourUpdateThread(GetCurrentThread()) != NO_ERROR)
-            error(L"error DetourUpdateThread");
+            return false;
 
         if (DetourAttach(&reinterpret_cast<PVOID&>(o_WndProc), hk_WndProc) != NO_ERROR)
-            error(L"error DetourAttach");
+            return false;
 
         if (DetourTransactionCommit() != NO_ERROR)
-            error(L"error DetourTransactionCommit");
+            return false;
+
+        spdlog::info("hook WndProc success");
     }
 
     return o_RegisterClassA(lpWndClass);
@@ -453,9 +380,7 @@ ATOM WINAPI hk_RegisterClassA(const WNDCLASSA* lpWndClass)
  */
 BOOL WINAPI hk_Rectangle(HDC hdc, int left, int top, int right, int bottom)
 {
-    // printf("%d %d\n", left, top);
-
-    if (active_flavor.id == POTATO)
+    if (active_flavor.id == FLAVOR_POTATO)
     {
         if ((left == 1469 && top == 15) || // box inside menu button
             (left == 1221 && top == 581) || // bus fader box
@@ -465,14 +390,14 @@ BOOL WINAPI hk_Rectangle(HDC hdc, int left, int top, int right, int bottom)
             return true;
     }
 
-    if (active_flavor.id == BANANA)
+    if (active_flavor.id == FLAVOR_BANANA)
     {
         if ((left == 848 && top == 15) || // box inside menu button
             (left == 789 && top == 432) || // bus fader box
             (left == 727 && top == 432) || // bus fader box
             (left == 913 && top == 432) || // bus fader box
             (left == 851 && top == 432)) // bus fader box
-                return true;
+            return true;
     }
 
     return o_Rectangle(hdc, left, top, right, bottom);
@@ -508,8 +433,8 @@ HBITMAP __fastcall hk_swap_bg(uint8_t* data_ptr, uint32_t size)
  */
 void __cdecl hk_swap_bg(uint8_t** ppvBits, uint8_t* data_ptr, uint32_t size)
 {
-    LPBITMAPFILEHEADER bitmap_main_header = reinterpret_cast<LPBITMAPFILEHEADER>(bg_main_bitmap_data.data());
-    LPBITMAPFILEHEADER bitmap_settings_header = reinterpret_cast<LPBITMAPFILEHEADER>(bg_settings_bitmap_data.data());
+    auto bitmap_main_header = reinterpret_cast<LPBITMAPFILEHEADER>(bg_main_bitmap_data.data());
+    auto bitmap_settings_header = reinterpret_cast<LPBITMAPFILEHEADER>(bg_settings_bitmap_data.data());
     uint32_t bitmap_main_data_size = active_flavor.bitmap_size_main - bitmap_main_header->bfOffBits;
     uint32_t bitmap_settings_data_size = active_flavor.bitmap_size_settings - bitmap_settings_header->bfOffBits;
 
@@ -527,100 +452,79 @@ void __cdecl hk_swap_bg(uint8_t** ppvBits, uint8_t* data_ptr, uint32_t size)
 //        DETOURS SETUP        //
 //*****************************//
 
+static std::vector<std::pair<PVOID*, PVOID>> hooks = {
+    {&reinterpret_cast<PVOID&>(o_CreateFontIndirectA), hk_CreateFontIndirectA},
+    {&reinterpret_cast<PVOID&>(o_AppendMenuA), hk_AppendMenuA},
+    {&reinterpret_cast<PVOID&>(o_CreatePen), hk_CreatePen},
+    {&reinterpret_cast<PVOID&>(o_CreateBrushIndirect), hk_CreateBrushIndirect},
+    {&reinterpret_cast<PVOID&>(o_SetTextColor), hk_SetTextColor},
+    {&reinterpret_cast<PVOID&>(o_RegisterClassA), hk_RegisterClassA},
+    {&reinterpret_cast<PVOID&>(o_Rectangle), hk_Rectangle},
+    {&reinterpret_cast<PVOID&>(o_swap_bg), hk_swap_bg},
+    {&reinterpret_cast<PVOID&>(o_WndProc), hk_WndProc}
+};
+
 /**
  * Initializes Detours hooks
  */
-void init_hooks()
+bool apply_hooks()
 {
-    o_swap_bg = reinterpret_cast<o_swap_bg_t>(find_function_signature(sig_swap_bg));
+    auto o_swap_bg_optional = utils::find_function_signature(sig_swap_bg);
 
-    if (!o_swap_bg)
-        error(L"error find_function_signature");
+    if (!o_swap_bg_optional)
+    {
+        spdlog::error("unable to find swap bg function");
+        return false;
+    }
 
-    if (!(DetourRestoreAfterWith()))
-        error(L"DetourRestoreAfterWith");
+    o_swap_bg = reinterpret_cast<o_swap_bg_t>(*o_swap_bg_optional);
 
     if (DetourTransactionBegin() != NO_ERROR)
-        error(L"error DetourTransactionBegin");
+        return false;
 
     if (DetourUpdateThread(GetCurrentThread()) != NO_ERROR)
-        error(L"error DetourUpdateThread");
+        return false;
 
-    if (DetourAttach(&reinterpret_cast<PVOID&>(o_CreateMutexA), hk_CreateMutexA) != NO_ERROR)
-        error(L"error DetourAttach");
-
-    if (DetourAttach(&reinterpret_cast<PVOID&>(o_CreateFontIndirectA), hk_CreateFontIndirectA) != NO_ERROR)
-        error(L"error DetourAttach");
-
-    if (DetourAttach(&reinterpret_cast<PVOID&>(o_AppendMenuA), hk_AppendMenuA) != NO_ERROR)
-        error(L"error DetourAttach");
-
-    if (DetourAttach(&reinterpret_cast<PVOID&>(o_CreatePen), hk_CreatePen) != NO_ERROR)
-        error(L"error DetourAttach");
-
-    if (DetourAttach(&reinterpret_cast<PVOID&>(o_CreateBrushIndirect), hk_CreateBrushIndirect) != NO_ERROR)
-        error(L"error DetourAttach");
-
-    if (DetourAttach(&reinterpret_cast<PVOID&>(o_SetTextColor), hk_SetTextColor) != NO_ERROR)
-        error(L"error DetourAttach");
-
-    if (DetourAttach(&reinterpret_cast<PVOID&>(o_RegisterClassA), hk_RegisterClassA) != NO_ERROR)
-        error(L"error DetourAttach");
-
-    if (DetourAttach(&reinterpret_cast<PVOID&>(o_Rectangle), hk_Rectangle) != NO_ERROR)
-        error(L"error DetourAttach");
-
-    if (DetourAttach(&reinterpret_cast<PVOID&>(o_swap_bg), hk_swap_bg) != NO_ERROR)
-        error(L"error DetourAttach");
+    for (const auto& [original, hook] : hooks) {
+        if (*original != nullptr && DetourAttach(original, hook) != NO_ERROR)
+        {
+            spdlog::error("unable to hook functions");
+            return false;
+        }
+    }
 
     if (DetourTransactionCommit() != NO_ERROR)
-        error(L"error DetourTransactionCommit");
+        return false;
+
+    return true;
 }
 
 /**
- * Clean up Detours hooks
+ * Initializes only the CreateMutexA hook, where other functions are hooked and vmtheme is initialized properly.
  */
-void cleanup_hooks()
+bool apply_initial_hook()
 {
     if (DetourTransactionBegin() != NO_ERROR)
-        error(L"error DetourTransactionBegin");
+        return false;
 
     if (DetourUpdateThread(GetCurrentThread()) != NO_ERROR)
-        error(L"error DetourUpdateThread");
+        return false;
 
-    if (DetourDetach(&reinterpret_cast<PVOID&>(o_CreateMutexA), hk_CreateMutexA) != NO_ERROR)
-        error(L"error DetourDetach");
-
-    if (DetourDetach(&reinterpret_cast<PVOID&>(o_CreateFontIndirectA), hk_CreateFontIndirectA) != NO_ERROR)
-        error(L"error DetourDetach");
-
-    if (DetourDetach(&reinterpret_cast<PVOID&>(o_AppendMenuA), hk_AppendMenuA) != NO_ERROR)
-        error(L"error DetourDetach");
-
-    if (DetourDetach(&reinterpret_cast<PVOID&>(o_CreatePen), hk_CreatePen) != NO_ERROR)
-        error(L"error DetourDetach");
-
-    if (DetourDetach(&reinterpret_cast<PVOID&>(o_CreateBrushIndirect), hk_CreateBrushIndirect) != NO_ERROR)
-        error(L"error DetourDetach");
-
-    if (DetourDetach(&reinterpret_cast<PVOID&>(o_SetTextColor), hk_SetTextColor) != NO_ERROR)
-        error(L"error DetourDetach");
-
-    if (DetourDetach(&reinterpret_cast<PVOID&>(o_RegisterClassA), hk_RegisterClassA) != NO_ERROR)
-        error(L"error DetourDetach");
-
-    if (DetourDetach(&reinterpret_cast<PVOID&>(o_Rectangle), hk_Rectangle) != NO_ERROR)
-        error(L"error DetourDetach");
-
-    if (o_WndProc != nullptr && DetourDetach(&reinterpret_cast<PVOID&>(o_WndProc), hk_WndProc) != NO_ERROR)
-        error(L"error DetourDetach");
-
-    if (o_swap_bg != nullptr && DetourDetach(&reinterpret_cast<PVOID&>(o_swap_bg), hk_swap_bg) != NO_ERROR)
-        error(L"error DetourDetach");
+    if (DetourAttach(&reinterpret_cast<PVOID&>(o_CreateMutexA), hk_CreateMutexA) != NO_ERROR)
+        return false;
 
     if (DetourTransactionCommit() != NO_ERROR)
-        error(L"error DetourTransactionCommit");
+        return false;
+
+    return true;
 }
+
+
+
+/**
+ * Detours needs a single exported function with ordinal 1
+ */
+void dummy_export() {}
 
 /**
  * DLL entry point
@@ -628,19 +532,10 @@ void cleanup_hooks()
  */
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
-    if (DetourIsHelperProcess())
-        return TRUE;
-
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
-#ifndef NDEBUG
-        attach_console();
-#endif
-        init_hooks();
-    }
-    else if (fdwReason == DLL_PROCESS_DETACH)
-    {
-        cleanup_hooks();
+        utils::attach_console_debug();
+        return apply_initial_hook();
     }
 
     return TRUE;
