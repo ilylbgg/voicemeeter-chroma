@@ -27,9 +27,9 @@ For any problems or bug reports, please create an issue here on Github or ask on
 
 This mod replaces default UI elements and colors of Voicemeeter by hooking certain Windows API and Voicemeeter functions responsible for drawing on the application window surface.
 
-It creates a copy of the Voicemeeter executable and patches it's import table so that it loads the mod on start-up, which performs the theme initialization.
+It creates a copy of the Voicemeeter executable and patches its import table so that it loads the mod DLL on start-up, which performs the theme initialization.
 
-[Supported themes](#-supported-themes) are placed in the `Documents/Voicemeeter` directory and consist of bitmap images for the UI elements and a single `.yaml` file for color mappings.
+[Supported themes](#-supported-themes) are placed in the `Documents/Voicemeeter/themes` directory and consist of bitmap images for the UI elements and a single `.yaml` file for color mappings.
 Themes can be easily created, modified and adapted using regular image editing software.
 
 ### Files
@@ -41,7 +41,7 @@ It is copied to the `C:\Program Files (x86)\VB\Voicemeeter` directory and loaded
 
 #### addimport32.exe | addimport64.exe
 
-Patches the import table of the Voicemeeter executable by adding an entry for `vmtheme.dll`. This is only done once, when you run the patching script. Voicemeeter will from then on load the DLL when it starts.
+Patches the import table of the Voicemeeter executable by adding an entry for `vmtheme32.dll` / `vmtheme64.dll`. This is only done once, when you run the patching script. Voicemeeter will from then on load the DLL when it starts.
 
 #### vmtheme_patcher.ps1
 
@@ -59,7 +59,7 @@ Tested on Windows 10 & Windows 11 for the following Voicemeeter versions:
 
 (Older versions may work as well).
 
-## 🚀 Getting started
+## 🚀 Getting Started
 
 1. Download the prebuilt binaries from the [Release page](https://github.com/emkaix/voicemeeter-themes-mod/releases) and extract the .zip folder.
 2. Open the extracted folder and `Shift + right-click` somewhere inside the folder.
@@ -74,13 +74,13 @@ powershell -ExecutionPolicy Bypass -File .\vmtheme_patcher.ps1
 6. Choose a [supported theme](#-supported-themes) and place it in `C:\Users\<USER>\Documents\Voicemeeter\themes\`
 7. Run the newly created `voicemeeter*_vmtheme.exe` to start Voicemeeter with the theme applied.
 
-## 🎨 Supported themes
+## 🎨 Supported Themes
 
 [Catppuccin Mocha (Banana & Potato)](https://github.com/emkaix/voicemeeter-theme-catppuccin-mocha)
 
 [Catppuccin Macchiato (currently only Banana)](https://github.com/emkaix/voicemeeter-theme-catppuccin-macchiato)
 
-## 🛠️ Build from source
+## 🛠️ Build From Source
 
 Install the following toolchain if you don't have it installed already (older versions of the toolchain may work as well).
 
@@ -109,12 +109,12 @@ No, this is a completely unofficial mod that is not affiliated with Voicemeeter 
 
 ### How does it work?
 
-It patches the Voicemeeter executable so that it loads the mod dll on start-up. The mod then hooks (= intercepts) some Windows API functions responsible for drawing on the application surface. This includes: [CreatePen](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createpen), [CreateBrushIndirect](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createbrushindirect) and [SetTextColor](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-settextcolor), among others. It also hooks a specific function in order to swap out the background bitmap.
+It patches the Voicemeeter executable so that it loads the mod DLL on start-up. The mod then hooks (= intercepts) some Windows API functions responsible for drawing on the application surface. This includes: [CreatePen](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createpen), [CreateBrushIndirect](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createbrushindirect) and [SetTextColor](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-settextcolor), among others. It also hooks a specific function in order to swap out the background bitmap.
 Hooking is done using the Microsoft Detours library: https://github.com/microsoft/Detours/wiki
 
 ### Does it modify the Voicemeeter executable on disk?
 
-It doesn't modify or delete the original executable. It creates a copy with `_vmtheme` appended to it's name that loads the mod when executed.
+It doesn't modify or delete the original executable. It creates a copy with `_vmtheme` appended to its name that loads the mod when executed.
 
 ### I have Voicemeeter configured to run on Windows startup, how can I autostart Voicemeeter with the theme applied?
 
@@ -125,22 +125,24 @@ Create a backup of the original executable and rename the mod executable by remo
 #### Option 2
 
 1. Untick `Run on Windows Startup` in the Voicemeeter menu
-2. Create a shortcut to mod executable in `C:\Users\<USER>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup`
+2. Create a shortcut to the mod executable in `C:\Users\<USER>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup`
 
-### Does using this mod alone give me a themed Voicemeeter?
+### Does this mod give me a themed Voicemeeter on it's own?
 
 No, this mod only enables theme support. You also need to download a supported theme separately, see [Supported themes](#-supported-themes).
          
 ### How do I make my own theme?
 
 Get a [supported theme](#-supported-themes) and edit the bitmaps with image editing software. You'll also need to adapt the color mapping in the `colors.yaml` file to match the background bitmaps.
-If you want the original background images embedded in the Voicemeeter executable, you need to extract them yourself using [this guide I wrote on the official Voicemeeter Discord](https://discord.com/channels/755690270795890739/1369370435187380304).
+If you want the original background images embedded in the Voicemeeter executable, you need to extract them yourself, as described in [this guide I wrote on the official Voicemeeter Discord](https://discord.com/channels/755690270795890739/1369370435187380304).
 
 ## 🔗 Dependencies
 
 - Microsoft Detours [https://github.com/microsoft/Detours](https://github.com/microsoft/Detours)
   - For hooking Windows API and custom functions.
-- nlohmann json [https://github.com/nlohmann/json](https://github.com/nlohmann/json)
-  - For parsing the json config files.
+- spdlog [https://github.com/gabime/spdlog](https://github.com/gabime/spdlog)
+  - For log file functionality.
+- yaml-cpp [https://github.com/jbeder/yaml-cpp](https://github.com/jbeder/yaml-cpp)
+  - for parsing configuration files.
 
 The dependencies are pulled and built from source in the build step via the CMakeLists.txt file.
