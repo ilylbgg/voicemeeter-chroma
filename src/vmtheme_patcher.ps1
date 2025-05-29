@@ -17,7 +17,7 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 # Required files in script directory
-$requiredFiles = @("vmtheme32.dll", "vmtheme64.dll", "setdll32.exe", "setdll64.exe")
+$requiredFiles = @("vmtheme32.dll", "vmtheme64.dll", "addimport32.exe", "addimport64.exe")
 foreach ($file in $requiredFiles)
 {
     $filePath = Join-Path $scriptDir $file
@@ -89,16 +89,16 @@ foreach ($exe in $exeNames)
     Write-Host "Created duplicate: $modExePath" -ForegroundColor Green
 }
 
-# Run setdll.exe for both 64-bit and 32-bit
-$cmd32 = "& `"$scriptDir\setdll32.exe`" vmtheme32.dll `"$voicemeeterPath\$($exeNames[0])`" `"$voicemeeterPath\$( $exeNames[0] -replace '\.exe$', '_vmtheme.exe' )`""
-$cmd64 = "& `"$scriptDir\setdll64.exe`" vmtheme64.dll `"$voicemeeterPath\$($exeNames[1])`" `"$voicemeeterPath\$( $exeNames[1] -replace '\.exe$', '_vmtheme.exe' )`""
+# Run addimport.exe for both 64-bit and 32-bit
+$cmd32 = "& `"$scriptDir\addimport32.exe`" vmtheme32.dll `"$voicemeeterPath\$($exeNames[0])`" `"$voicemeeterPath\$( $exeNames[0] -replace '\.exe$', '_vmtheme.exe' )`""
+$cmd64 = "& `"$scriptDir\addimport64.exe`" vmtheme64.dll `"$voicemeeterPath\$($exeNames[1])`" `"$voicemeeterPath\$( $exeNames[1] -replace '\.exe$', '_vmtheme.exe' )`""
 
 Write-Host
 Write-Host "Patching 32bit target: $cmd32" -ForegroundColor Yellow
 Invoke-Expression $cmd32
 if ($LASTEXITCODE -ne 0)
 {
-    Write-Host "setdll32.exe failed for $dll with exit code $LASTEXITCODE. Exiting..." -ForegroundColor Red
+    Write-Host "addimport32.exe failed for $dll with exit code $LASTEXITCODE. Exiting..." -ForegroundColor Red
     Pause
     exit $LASTEXITCODE
 }
@@ -109,7 +109,7 @@ Write-Host "Patching 64bit target: $cmd64" -ForegroundColor Yellow
 Invoke-Expression $cmd64
 if ($LASTEXITCODE -ne 0)
 {
-    Write-Host "setdll64.exe failed for $dll with exit code $LASTEXITCODE. Exiting..." -ForegroundColor Red
+    Write-Host "addimport64.exe failed for $dll with exit code $LASTEXITCODE. Exiting..." -ForegroundColor Red
     Pause
     exit $LASTEXITCODE
 }

@@ -96,7 +96,7 @@ HANDLE WINAPI hk_CreateMutexA(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bIni
     {
         init_entered = true;
         utils::setup_logging();
-        spdlog::info("###################################");
+        spdlog::info("");
         spdlog::info("vmtheme init start");
         std::optional<flavor_id> flavor_id = utils::get_flavor_id();
 
@@ -150,7 +150,7 @@ HANDLE WINAPI hk_CreateMutexA(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bIni
             return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
         }
 
-        std::string active_theme_name_str = yaml_theme[active_flavor.name].as<std::string>();
+        auto active_theme_name_str = yaml_theme[active_flavor.name].as<std::string>();
 
         if (active_theme_name_str.empty())
         {
@@ -174,7 +174,7 @@ HANDLE WINAPI hk_CreateMutexA(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bIni
             return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
         }
 
-        std::wstring theme_path = (std::filesystem::path(*userprofile_path) / L"themes" / *active_flavor_name / *active_theme_name_wstr);
+        std::wstring theme_path = (std::filesystem::path(*userprofile_path) / L"themes" / *active_theme_name_wstr / *active_flavor_name);
 
         if (!std::filesystem::exists(std::filesystem::path(theme_path) / BM_FILE_BG))
         {
@@ -200,13 +200,13 @@ HANDLE WINAPI hk_CreateMutexA(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bIni
             return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
         }
 
-        if (!std::filesystem::exists(std::filesystem::path(theme_path) / CONFIG_FILE_COLORS))
+        if (!std::filesystem::exists(std::filesystem::path(*userprofile_path) / L"themes" / *active_theme_name_wstr / CONFIG_FILE_COLORS))
         {
             spdlog::error("can't find {}", *utils::wstr_to_str(CONFIG_FILE_COLORS.data()));
             return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
         }
 
-        std::ifstream colors_file(std::filesystem::path(theme_path) / CONFIG_FILE_COLORS);
+        std::ifstream colors_file(std::filesystem::path(*userprofile_path) / L"themes" / *active_theme_name_wstr / CONFIG_FILE_COLORS);
 
         if (!colors_file.is_open())
         {
@@ -225,7 +225,7 @@ HANDLE WINAPI hk_CreateMutexA(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bIni
         }
 
         spdlog::info("vmtheme init success");
-        spdlog::info("finish hooking...");
+        spdlog::info("finish hooking static functions...");
 
         if (!apply_hooks())
         {

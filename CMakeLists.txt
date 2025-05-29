@@ -116,9 +116,9 @@ set_target_properties(${TARGET_VMTHEME} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}/out
 )
 
-# --------------------------#
+# ---------------------------- #
 # Target: addimport[32|64].exe #
-# --------------------------#
+# ---------------------------- #
 
 set(ADDIMPORT_SOURCES src/addimport.cpp)
 
@@ -132,8 +132,21 @@ target_link_libraries(${TARGET_ADDIMPORT} PRIVATE
         lib_detours
 )
 set_target_properties(${TARGET_ADDIMPORT} PROPERTIES
-        OUTPUT_NAME "edit_import${ARCH_POSTFIX}"
+        OUTPUT_NAME "addimport${ARCH_POSTFIX}"
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/out
         RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/out
         RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}/out
 )
+
+# -------------------------------- #
+# Target: copy vmtheme_patcher.ps1 #
+# -------------------------------- #
+
+set(PATCHER_SOURCE_FILE "${CMAKE_SOURCE_DIR}/src/vmtheme_patcher.ps1")
+set(PATCHER_DEST_FILE "${CMAKE_SOURCE_DIR}/out/vmtheme_patcher.ps1")
+add_custom_command(
+        OUTPUT ${PATCHER_DEST_FILE}
+        COMMAND ${CMAKE_COMMAND} -E copy ${PATCHER_SOURCE_FILE} ${PATCHER_DEST_FILE}
+        DEPENDS ${SOURCE_FILE}
+)
+add_custom_target(CopyFile ALL DEPENDS ${PATCHER_DEST_FILE})

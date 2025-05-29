@@ -66,7 +66,7 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    DetourBinaryResetImports(binary);
+    // DetourBinaryResetImports(binary);
     BOOL bAddedDll = FALSE;
 
     if (!DetourBinaryEditImports(binary, &bAddedDll, AddBywayCallback, nullptr, nullptr, nullptr))
