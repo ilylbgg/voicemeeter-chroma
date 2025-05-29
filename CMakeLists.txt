@@ -73,9 +73,12 @@ FetchContent_Declare(
         URL https://github.com/jbeder/yaml-cpp/archive/2f86d13775d119edbb69af52e5f566fd65c6953b.zip
         SOURCE_DIR ${CMAKE_SOURCE_DIR}/external/yaml-cpp
 )
+set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "Disable yaml-cpp tools" FORCE)
+set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "Disable yaml-cpp contrib" FORCE)
 FetchContent_MakeAvailable(yaml-cpp)
 set(SPDLOG_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/external/yaml-cpp/include)
 set(YAML_CPP_BUILD_FLAGS /MT)
+target_compile_options(yaml-cpp PRIVATE /W0)
 
 # ------------------ #
 # External: spdlog   #
