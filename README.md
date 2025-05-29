@@ -25,19 +25,26 @@ Tested with Windows 10/11 and versions `1.1.1.9`, `2.1.1.9`, `3.1.1.9` of the so
 
 ## Getting started
 
-1. [Build the project from source](#build).
-2. Copy `vmtheme64.dll`/`vmtheme32.dll` into `C:\Program Files (x86)\VB\Voicemeeter\`
-3. Choose a [supported theme](#supported-themes) and place it in `C:\Users\<USER>\Documents\Voicemeeter\themes\`
-4. Set the active theme in `C:\Users\<USER>\Documents\Voicemeeter\theme.json`.
-5. Launch Voicemeeter with the launcher. The name depends on your build target, for Banana x64 the name is `vmtheme64-banana.exe`.
+1. Download the prebuilt binaries from the [Release page](https://github.com/emkaix/voicemeeter-themes-mod/releases) and extract the .zip folder.
+2. Open the extracted folder and `Shift + right click` somewhere inside the folder.
+3. Select `Open PowerShell window here`.
+4. Run the following command to unblock and execute the script:
+
+```pwsh
+powershell -ExecutionPolicy Bypass -File .\vmtheme_patcher.ps1`
+```
+
+5. Select the Voicemeeter version you want to patch (Default, Banana, Potato) and press Enter. You should see `Voicemeeter patching complete!`.
+6. Choose a [supported theme](#supported-themes) and place it in `C:\Users\<USER>\Documents\Voicemeeter\themes\`
+7. Run the newly created `voicemeeter*_vmtheme.exe` to start Voicemeeter with the theme applied.
 
 ## Supported themes
 
-[Catppucchin Macchiato (currently only Banana)](https://github.com/emkaix/voicemeeter-theme-catppuccin-macchiato)
+[Catppuccin Macchiato (currently only Banana)](https://github.com/emkaix/voicemeeter-theme-catppuccin-macchiato)
 
-[Catppucchin Mocha (Banana & Potato)](https://github.com/emkaix/voicemeeter-theme-catppuccin-mocha)
+[Catppuccin Mocha (Banana & Potato)](https://github.com/emkaix/voicemeeter-theme-catppuccin-mocha)
 
-## Build
+## Build from source
 
 Install the following toolchain if you don't have it installed already (older versions of the toolchain may work as well). After building, you can uninstall everything, if you want.
 
@@ -49,36 +56,14 @@ Install the following toolchain if you don't have it installed already (older ve
 3. Make sure only these 3 options are selected and then click install.
 4. [Download](https://github.com/emkaix/voicemeeter-themes-mod/archive/refs/heads/master.zip) and unzip or clone the repository.
 5. In the start menu, search and run `Developer PowerShell for VS 2022` and navigate to the downloaded folder using `cd`.
-6. Run **one** of the following commands, depending on the Voicemeeter version you are using:
-    - Voicemeeter Default 32bit:
+6. Run the following command:
       ```pwsh
-      cmake -S . -B out -G "Visual Studio 17 2022" -A Win32 -DDEFINE_FLAVOR_DEFAULT=1
+      cmake -S . -B build32 -G "Visual Studio 17 2022" -A Win32; `
+      cmake -S . -B build64 -G "Visual Studio 17 2022" -A x64; `
+      cmake --build build32 --config Release; `
+      cmake --build build64 --config Release
       ```
-    - Voicemeeter Default 64bit:
-      ```pwsh
-      cmake -S . -B out -G "Visual Studio 17 2022" -A x64 -DDEFINE_FLAVOR_DEFAULT=1
-      ```
-    - Voicemeeter Banana 32bit:
-      ```pwsh
-      cmake -S . -B out -G "Visual Studio 17 2022" -A Win32 -DDEFINE_FLAVOR_BANANA=1
-      ```
-    - Voicemeeter Banana 64bit:
-      ```pwsh
-      cmake -S . -B out -G "Visual Studio 17 2022" -A x64 -DDEFINE_FLAVOR_BANANA=1
-      ```
-    - Voicemeeter Potato 32bit:
-      ```pwsh
-      cmake -S . -B out -G "Visual Studio 17 2022" -A Win32 -DDEFINE_FLAVOR_POTATO=1
-      ```
-    - Voicemeeter Potato 64bit:
-      ```pwsh
-      cmake -S . -B out -G "Visual Studio 17 2022" -A x64 -DDEFINE_FLAVOR_POTATO=1
-      ```
-7. Run
-   ```pwsh
-   cmake --build out --config Release
-   ```
-8. The build artifacts are now located in `out/Release`.
+8. The build artifacts are now located in the `out` folder.
 
 ## Frequently Asked Questions
 
