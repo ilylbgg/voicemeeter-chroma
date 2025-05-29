@@ -1,5 +1,9 @@
 .idea/
 cmake-build-*/
-resources/
-external/detours
-external/json
+external/
+build32/
+build64/
+out/addimport*
+out/vmtheme*
+src/addimport.rc
+src/vmtheme.rc
