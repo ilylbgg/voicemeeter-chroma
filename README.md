@@ -5,24 +5,27 @@ Enables theming support for Voicemeeter, Voicemeeter Banana and Voicemeeter Pota
 ![UI](https://raw.githubusercontent.com/emkaix/voicemeeter-theme-catppuccin-mocha/refs/heads/main/potato.png)
 ![UI](https://raw.githubusercontent.com/emkaix/voicemeeter-theme-catppuccin-mocha/refs/heads/main/banana.png)
 
-- [Disclaimer](#-disclaimer)
-- [Support](#-support)
-- [Overview](#-overview)
-- [Status](#-status)
-- [Getting started](#-getting-started)
-- [Supported themes](#-supported-themes)
-- [Build](#-build-from-source)
-- [FAQ](#-frequently-asked-questions)
-- [Dependencies](#-dependencies)
+- [Disclaimer](#disclaimer)
+- [Support](#support)
+- [Overview](#overview)
+- [Status](#status)
+- [Getting started](#getting-started)
+- [Supported themes](#supported-themes)
+- [Build](#build-from-source)
+- [FAQ](#faq)
+- [Dependencies](#dependencies)
 
+<a name="disclaimer"></a>
 ## ⚠️ Disclaimer
 
 **This project is an unofficial, third-party, independent modification of Voicemeeter. It is not affiliated with, endorsed by, or in any way officially connected to VB-Audio Software or any of its subsidiaries or affiliates. All trademarks, service marks, and copyrights related to Voicemeeter are the property of VB-Audio Software. If you have any problems related to or caused by this mod, you will not get any support whatsoever on the Voicemeeter forums or the Voicemeeter Discord.**
 
+<a name="support"></a>
 ## 🩹 Support
 
 For any problems or bug reports, please create an issue here on Github or ask on the dedicated [Discord server](https://discord.gg/MdpWZGqm).
 
+<a name="overview"></a>
 ## 🗺️ Overview
 
 This mod replaces default UI elements and colors of Voicemeeter by hooking certain Windows API and Voicemeeter functions responsible for drawing on the application window surface.
@@ -49,6 +52,7 @@ Runs `addimport32.exe` and `addimport64.exe` to patch the 32bit and 64bit versio
 It creates a new executable with `_vmtheme` suffix and only patches this copy (i.e. if you select "Potato", it creates `voicemeeter8_vmtheme.exe` and `voicemeeter8x64_vmtheme.exe`).
 It then copies `vmtheme32.dll` and `vmtheme64.dll` into the Voicemeeter installation directory.
 
+<a name="status"></a>
 ## 🚦 Status
 
 Tested on Windows 10 & Windows 11 for the following Voicemeeter versions:
@@ -59,6 +63,7 @@ Tested on Windows 10 & Windows 11 for the following Voicemeeter versions:
 
 (Older versions may work as well).
 
+<a name="getting-started"></a>
 ## 🚀 Getting Started
 
 1. Download the prebuilt binaries from the [Release page](https://github.com/emkaix/voicemeeter-themes-mod/releases) and extract the .zip folder.
@@ -74,12 +79,14 @@ powershell -ExecutionPolicy Bypass -File .\vmtheme_patcher.ps1
 6. Choose a [supported theme](#-supported-themes) and place it in `C:\Users\<USER>\Documents\Voicemeeter\themes\`
 7. Run the newly created `voicemeeter*_vmtheme.exe` to start Voicemeeter with the theme applied.
 
+<a name="supported-themes"></a>
 ## 🎨 Supported Themes
 
 [Catppuccin Mocha (Banana & Potato)](https://github.com/emkaix/voicemeeter-theme-catppuccin-mocha)
 
 [Catppuccin Macchiato (currently only Banana)](https://github.com/emkaix/voicemeeter-theme-catppuccin-macchiato)
 
+<a name="build-from-source"></a>
 ## 🛠️ Build From Source
 
 Install the following toolchain if you don't have it installed already (older versions of the toolchain may work as well).
@@ -101,6 +108,7 @@ Install the following toolchain if you don't have it installed already (older ve
       ```
 8. The build artifacts are now located in the `out` folder.
 
+<a name="faq"></a>
 ## 🤔 Frequently Asked Questions
 
 ### I have problems using this, can I go to the Voicemeeter Discord / forum and ask for help there?
@@ -136,6 +144,7 @@ No, this mod only enables theme support. You also need to download a supported t
 Get a [supported theme](#-supported-themes) and edit the bitmaps with image editing software. You'll also need to adapt the color mapping in the `colors.yaml` file to match the background bitmaps.
 If you want the original background images embedded in the Voicemeeter executable, you need to extract them yourself, as described in [this guide I wrote on the official Voicemeeter Discord](https://discord.com/channels/755690270795890739/1369370435187380304).
 
+<a name="dependencies"></a>
 ## 🔗 Dependencies
 
 - Microsoft Detours [https://github.com/microsoft/Detours](https://github.com/microsoft/Detours)
