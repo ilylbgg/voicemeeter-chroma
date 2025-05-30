@@ -53,6 +53,7 @@ typedef struct flavor_info
     flavor_id id;
     uint32_t bitmap_size_main{};
     uint32_t bitmap_size_settings{};
+    uint32_t bitmap_size_cassette{};
 } flavor_info_t;
 
 namespace utils

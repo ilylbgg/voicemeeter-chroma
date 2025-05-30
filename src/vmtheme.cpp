@@ -49,9 +49,9 @@ typedef LRESULT (__stdcall *o_WndProc_t)(HWND hWnd, UINT Msg, WPARAM wParam, LPA
 //      GLOBALS     //
 //******************//
 
-static const flavor_info_t flavor_info_default = {"default", FLAVOR_DEFAULT, 0x1D1036, 0xAD70E};
-static const flavor_info_t flavor_info_banana = {"banana", FLAVOR_BANANA, 0x1D1036, 0x1266FE};
-static const flavor_info_t flavor_info_potato = {"potato", FLAVOR_POTATO, 0x39FEC6, 0x1ACA06};
+static const flavor_info_t flavor_info_default = {"default", FLAVOR_DEFAULT, 0x1D1036, 0xAD70E, 0xE1036};
+static const flavor_info_t flavor_info_banana = {"banana", FLAVOR_BANANA, 0x1D1036, 0x1266FE, 0xAFCB6};
+static const flavor_info_t flavor_info_potato = {"potato", FLAVOR_POTATO, 0x39FEC6, 0x1ACA06, 0xE6DF6};
 
 static std::unordered_map<flavor_id, flavor_info_t> flavor_map =
 {
@@ -68,6 +68,7 @@ static std::unordered_map<long, long> font_height_map = {
 static flavor_info_t active_flavor;
 static std::vector<uint8_t> bg_main_bitmap_data;
 static std::vector<uint8_t> bg_settings_bitmap_data;
+static std::vector<uint8_t> bg_cassette_bitmap_data;
 static bool init_entered = false;
 static YAML::Node yaml_colors;
 static o_swap_bg_t o_swap_bg = nullptr;
@@ -75,6 +76,7 @@ static o_WndProc_t o_WndProc = nullptr;
 
 static constexpr std::wstring_view BM_FILE_BG = L"bg.bmp";
 static constexpr std::wstring_view BM_FILE_BG_SETTINGS = L"bg_settings.bmp";
+static constexpr std::wstring_view BM_FILE_BG_CASSETTE = L"bg_cassette.bmp";
 static constexpr std::wstring_view CONFIG_FILE_THEME = L"theme.yaml";
 static constexpr std::wstring_view CONFIG_FILE_COLORS = L"colors.yaml";
 static constexpr std::string_view VM_MAINWINDOW_CLASSNAME = "VBCABLE0Voicemeeter0MainWindow0";
@@ -197,6 +199,18 @@ HANDLE WINAPI hk_CreateMutexA(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bIni
         if (!utils::load_bitmap(std::filesystem::path(theme_path) / BM_FILE_BG_SETTINGS, bg_settings_bitmap_data))
         {
             spdlog::error("error loading {}", *utils::wstr_to_str(BM_FILE_BG_SETTINGS.data()));
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
+
+        if (!std::filesystem::exists(std::filesystem::path(theme_path) / BM_FILE_BG_CASSETTE))
+        {
+            spdlog::error("can't find {} in themes folder", *utils::wstr_to_str(BM_FILE_BG_CASSETTE.data()));
+            return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+        }
+
+        if (!utils::load_bitmap(std::filesystem::path(theme_path) / BM_FILE_BG_CASSETTE, bg_cassette_bitmap_data))
+        {
+            spdlog::error("error loading {}", *utils::wstr_to_str(BM_FILE_BG_CASSETTE.data()));
             return o_CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
         }
 
@@ -417,6 +431,9 @@ HBITMAP __fastcall hk_swap_bg(uint8_t* data_ptr, uint32_t size)
 
     if (size == active_flavor.bitmap_size_settings)
         return o_swap_bg(bg_settings_bitmap_data.data(), size);
+
+    if (size == active_flavor.bitmap_size_cassette)
+        return o_swap_bg(bg_cassette_bitmap_data.data(), size);
 
     return o_swap_bg(data_ptr, size);
 }
