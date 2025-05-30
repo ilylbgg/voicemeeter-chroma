@@ -25,7 +25,7 @@ endif ()
 # ---------------- #
 
 add_compile_definitions(
-        VMTHEME_VERSION="vmtheme 1.0.0"
+        VMTHEME_VERSION="vmtheme 0.1.1"
         UNICODE
         ARCH_POSTFIX="${ARCH_POSTFIX}"
 )
