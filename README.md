@@ -66,7 +66,7 @@ Tested on Windows 10 & Windows 11 for the following Voicemeeter versions:
 <a name="getting-started"></a>
 ## 🚀 Getting Started
 
-1. Download the prebuilt binaries from the [Release page](https://github.com/emkaix/voicemeeter-themes-mod/releases) and extract the .zip folder.
+1. Download the mod from the [Release page](https://github.com/emkaix/voicemeeter-themes-mod/releases) and extract the .zip folder.
 2. Open the extracted folder and `Shift + right-click` somewhere inside the folder.
 3. Select `Open PowerShell window here`.
 4. Run the following command to unblock and execute the script:
@@ -75,9 +75,9 @@ Tested on Windows 10 & Windows 11 for the following Voicemeeter versions:
 powershell -ExecutionPolicy Bypass -File .\vmtheme_patcher.ps1
 ```
 
-5. Select the Voicemeeter version you want to patch (Default, Banana, Potato) and press Enter. You should see `Voicemeeter patching complete!`.
+5. Press enter to run the script. You should see `Voicemeeter patching complete!` at the end.
 6. Choose a [supported theme](#-supported-themes) and place it in `C:\Users\<USER>\Documents\Voicemeeter\themes\`
-7. Run the newly created `voicemeeter*_vmtheme.exe` to start Voicemeeter with the theme applied.
+7. Run one of the newly created `voicemeeter*_vmtheme.exe` files in the `C:\Program Files (x86)\VB\Voicemeeter` folder to start Voicemeeter with the theme applied.
 
 <a name="supported-themes"></a>
 ## 🎨 Supported Themes
