@@ -99,6 +99,6 @@ int main(int argc, char** argv)
 
     DetourBinaryClose(binary);
     CloseHandle(handle_exe_new);
-    printf("success: %s\n", exe_path_old.c_str());
+    printf("success: %s\n", exe_path_new.c_str());
     return 0;
 }

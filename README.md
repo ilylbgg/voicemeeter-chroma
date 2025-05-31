@@ -72,7 +72,7 @@ Tested on Windows 10 & Windows 11 for the following Voicemeeter versions:
 4. Run the following command to unblock and execute the script:
 
 ```pwsh
-powershell -ExecutionPolicy Bypass -File .\vmtheme_patcher.ps1
+powershell -ExecutionPolicy Bypass -File .\vmtheme_patcher.ps1 -Verb RunAs
 ```
 
 5. Select the Voicemeeter version you want to patch (Default, Banana, Potato) and press Enter. You should see `Voicemeeter patching complete!`.

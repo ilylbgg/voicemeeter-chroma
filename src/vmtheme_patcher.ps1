@@ -2,7 +2,7 @@ function Pause
 {
     Write-Host
     Write-Host "Press any key to exit..." -ForegroundColor Cyan
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    $null = [Console]::ReadKey($true)
 }
 
 # Elevation Check
@@ -29,48 +29,60 @@ foreach ($file in $requiredFiles)
     }
 }
 
-# Ask for Voicemeeter version
-Write-Host "Which Voicemeeter version do you want to patch?" -ForegroundColor Cyan
-Write-Host
-Write-Host "1. Default" -ForegroundColor White
-Write-Host "2. Banana" -ForegroundColor White
-Write-Host "3. Potato" -ForegroundColor White
-Write-Host
-$selection = Read-Host "Enter a number (1-3)"
+Write-Host "--------- vmtheme patcher ---------" -ForegroundColor Cyan
+Write-Host "Press any key to start patching..." -ForegroundColor Cyan
+$null = [Console]::ReadKey($true)
 
-switch ($selection)
+$vmNames32 = @(
+    "voicemeeter.exe",
+    "voicemeeterpro.exe",
+    "voicemeeter8.exe"
+)
+
+$vmNames64 = @(
+    "voicemeeter_x64.exe",
+    "voicemeeterpro_x64.exe",
+    "voicemeeter8x64.exe"
+)
+
+$vmNamesExist32 = @()
+$vmNamesExist64 = @()
+$voicemeeterPath = "C:\Program Files (x86)\VB\Voicemeeter"
+
+foreach ($exe in $vmNames32)
 {
-    '1' {
-        $exeNames = @("voicemeeter.exe", "voicemeeter_x64.exe")
-    }
-    '2' {
-        $exeNames = @("voicemeeterpro.exe", "voicemeeterpro_x64.exe")
-    }
-    '3' {
-        $exeNames = @("voicemeeter8.exe", "voicemeeter8x64.exe")
-    }
-    default {
-        Write-Host "Invalid selection. Please enter 1, 2, or 3." -ForegroundColor Red
-        Pause
-        exit 1
+    $exePath = Join-Path $voicemeeterPath $exe
+    if (Test-Path $exePath)
+    {
+        $vmNamesExist32 += $exe
+        Write-Host "Found Voicemeeter executable: $exe" -ForegroundColor Green
     }
 }
 
-# Check if both Voicemeeter executable files exist
-$voicemeeterPath = "C:\Program Files (x86)\VB\Voicemeeter"
-foreach ($exe in $exeNames)
+foreach ($exe in $vmNames64)
 {
     $exePath = Join-Path $voicemeeterPath $exe
-    if (-not (Test-Path $exePath))
+    if (Test-Path $exePath)
     {
-        Write-Host "Executable '$exe' not found in $voicemeeterPath, Exiting" -ForegroundColor Red
-        Pause
-        exit 1
+        $vmNamesExist64 += $exe
+        Write-Host "Found Voicemeeter executable: $exe" -ForegroundColor Green
     }
+}
+
+if (($vmNamesExist32 + $vmNamesExist64).Count -eq 0)
+{
+    Write-Host "No Voicemeeter executables found in $voicemeeterPath. Exiting." -ForegroundColor Red
+    Pause
+    exit 1
+}
+
+# Terminate running instances
+foreach ($name in $vmNamesExist32 + $vmNamesExist64) {
+    Get-Process -Name ($name -replace '\.exe$') -ErrorAction SilentlyContinue | Stop-Process -Force
 }
 
 # Copy executables with _vmtheme suffix (i.e voicemeeter8x64_vmtheme.exe)
-foreach ($exe in $exeNames)
+foreach ($exe in $vmNamesExist32 + $vmNamesExist64)
 {
     $exePath = Join-Path $voicemeeterPath $exe
     $modExePath = Join-Path $voicemeeterPath ($exe -replace '\.exe$', '_vmtheme.exe')
@@ -90,30 +102,37 @@ foreach ($exe in $exeNames)
 }
 
 # Run addimport.exe for both 64-bit and 32-bit
-$cmd32 = "& `"$scriptDir\addimport32.exe`" vmtheme32.dll `"$voicemeeterPath\$($exeNames[0])`" `"$voicemeeterPath\$( $exeNames[0] -replace '\.exe$', '_vmtheme.exe' )`""
-$cmd64 = "& `"$scriptDir\addimport64.exe`" vmtheme64.dll `"$voicemeeterPath\$($exeNames[1])`" `"$voicemeeterPath\$( $exeNames[1] -replace '\.exe$', '_vmtheme.exe' )`""
-
-Write-Host
-Write-Host "Patching 32bit target: $cmd32" -ForegroundColor Yellow
-Invoke-Expression $cmd32
-if ($LASTEXITCODE -ne 0)
+foreach ($exe in $vmNamesExist32)
 {
-    Write-Host "addimport32.exe failed for $dll with exit code $LASTEXITCODE. Exiting..." -ForegroundColor Red
-    Pause
-    exit $LASTEXITCODE
-}
-Write-Host "Successfully patched: $( $exeNames[0] -replace '\.exe$', '_vmtheme.exe' )" -ForegroundColor Green
+    $cmd32 = "& `"$scriptDir\addimport32.exe`" vmtheme32.dll `"$voicemeeterPath\$exe`" `"$voicemeeterPath\$( $exe -replace '\.exe$', '_vmtheme.exe' )`""
 
-Write-Host
-Write-Host "Patching 64bit target: $cmd64" -ForegroundColor Yellow
-Invoke-Expression $cmd64
-if ($LASTEXITCODE -ne 0)
-{
-    Write-Host "addimport64.exe failed for $dll with exit code $LASTEXITCODE. Exiting..." -ForegroundColor Red
-    Pause
-    exit $LASTEXITCODE
+    Write-Host
+    Write-Host "Patching 32bit target: $( $exe -replace '\.exe$', '_vmtheme.exe' )" -ForegroundColor Yellow
+    Invoke-Expression $cmd32
+    if ($LASTEXITCODE -ne 0)
+    {
+        Write-Host "addimport32.exe failed for $dll with exit code $LASTEXITCODE. Exiting..." -ForegroundColor Red
+        Pause
+        exit $LASTEXITCODE
+    }
+    Write-Host "Successfully patched: $( $exe -replace '\.exe$', '_vmtheme.exe' )" -ForegroundColor Green
 }
-Write-Host "Successfully patched: $( $exeNames[1] -replace '\.exe$', '_vmtheme.exe' )" -ForegroundColor Green
+
+foreach ($exe in $vmNamesExist64)
+{
+    $cmd64 = "& `"$scriptDir\addimport64.exe`" vmtheme64.dll `"$voicemeeterPath\$exe`" `"$voicemeeterPath\$( $exe -replace '\.exe$', '_vmtheme.exe' )`""
+
+    Write-Host
+    Write-Host "Patching 64bit target: $( $exe -replace '\.exe$', '_vmtheme.exe' )" -ForegroundColor Yellow
+    Invoke-Expression $cmd64
+    if ($LASTEXITCODE -ne 0)
+    {
+        Write-Host "addimport64.exe failed for $dll with exit code $LASTEXITCODE. Exiting..." -ForegroundColor Red
+        Pause
+        exit $LASTEXITCODE
+    }
+    Write-Host "Successfully patched: $( $exe -replace '\.exe$', '_vmtheme.exe' )" -ForegroundColor Green
+}
 
 # Copy DLLs to Voicemeeter folder
 foreach ($dll in @("vmtheme32.dll", "vmtheme64.dll"))
@@ -128,7 +147,7 @@ foreach ($dll in @("vmtheme32.dll", "vmtheme64.dll"))
     }
     catch
     {
-        Write-Host "Failed to copy $dll to $voicemeeterPath. Error: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Failed to copy $dll to $voicemeeterPath. Error: $( $_.Exception.Message )" -ForegroundColor Red
         Pause
         exit 1
     }
