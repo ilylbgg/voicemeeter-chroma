@@ -1,24 +1,30 @@
-# Voicemeeter Themes Mod
+<h1 align="center">VoiceMeeter Chroma</h1>
 
-Enables theming support for Voicemeeter, Voicemeeter Banana and Voicemeeter Potato.
+<p align="center">
+  <br>
+  <em>VoiceMeeter Chroma is a mod that adds theme support to Voicemeeter.</em>
+  <br>
+</p>
+
+<p align="center">
+   <img alt="GitHub Release" src="https://img.shields.io/github/v/release/emkaix/voicemeeter-themes-mod?style=flat&colorB=f38ba8">
+   <img alt="Github Downloads" src="https://img.shields.io/github/downloads/emkaix/voicemeeter-themes-mod/total?style=flat&colorB=a6e3a1" />
+   <img alt="GitHub License" src="https://img.shields.io/github/license/emkaix/voicemeeter-themes-mod?style=flat&colorB=89b4fa" />
+</p>
+
+
+<br>
 
 ![UI](https://raw.githubusercontent.com/emkaix/voicemeeter-theme-catppuccin-mocha/refs/heads/main/potato.png)
+
+<br>
+
 ![UI](https://raw.githubusercontent.com/emkaix/voicemeeter-theme-catppuccin-mocha/refs/heads/main/banana.png)
 
-- [Disclaimer](#disclaimer)
-- [Support](#support)
-- [Overview](#overview)
-- [Status](#status)
-- [Getting started](#getting-started)
-- [Supported themes](#supported-themes)
-- [Build](#build-from-source)
-- [FAQ](#faq)
-- [Dependencies](#dependencies)
+<br>
 
-<a name="disclaimer"></a>
-## ⚠️ Disclaimer
-
-**This project is an unofficial, third-party, independent modification of Voicemeeter. It is not affiliated with, endorsed by, or in any way officially connected to VB-Audio Software or any of its subsidiaries or affiliates. All trademarks, service marks, and copyrights related to Voicemeeter are the property of VB-Audio Software. If you have any problems related to or caused by this mod, you will not get any support whatsoever on the Voicemeeter forums or the Voicemeeter Discord.**
+> [!CAUTION]
+> **This project is an unofficial, third-party, independent modification of Voicemeeter. It is not affiliated with, endorsed by, or in any way officially connected to VB-Audio Software or any of its subsidiaries or affiliates. All trademarks, service marks, and copyrights related to Voicemeeter are the property of VB-Audio Software. If you have any problems related to or caused by this mod, you will not get any support whatsoever on the Voicemeeter forums or the Voicemeeter Discord.**
 
 <a name="support"></a>
 ## 🩹 Support
