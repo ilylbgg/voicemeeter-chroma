@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.30)
 # Project defines #
 # --------------- #
 
-project(vmtheme)
+project(vmchroma)
 include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -12,7 +12,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 set(TARGET_DETOURS lib_detours)
 set(TARGET_ADDIMPORT addimport)
-set(TARGET_VMTHEME vmtheme)
+set(TARGET_VMCHROMA vmchroma)
 
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(ARCH_POSTFIX "64")
@@ -25,9 +25,10 @@ endif ()
 # ---------------- #
 
 add_compile_definitions(
-        VMTHEME_VERSION="vmtheme 0.1.1"
+        VMCHROMA_VERSION="vmchroma 0.2.0"
         UNICODE
         ARCH_POSTFIX="${ARCH_POSTFIX}"
+        SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE
 )
 
 if (MSVC)
@@ -81,6 +82,21 @@ set(YAML_CPP_BUILD_FLAGS /MT)
 target_compile_options(yaml-cpp PRIVATE /W0)
 
 # ------------------ #
+# External: capstone #
+# ------------------ #
+
+FetchContent_Declare(
+        capstone
+        URL https://github.com/capstone-engine/capstone/archive/refs/tags/5.0.6.zip
+        SOURCE_DIR ${CMAKE_SOURCE_DIR}/external/capstone
+)
+set(CAPSTONE_ARCHITECTURE_DEFAULT OFF CACHE BOOL "" FORCE)
+set(CAPSTONE_X86_SUPPORT ON CACHE BOOL "" FORCE)
+set(CAPSTONE_BUILD_STATIC_MSVC_RUNTIME ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(capstone)
+set(CAPSTONE_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/external/capstone/include)
+
+# ------------------ #
 # External: spdlog   #
 # ------------------ #
 
@@ -93,27 +109,43 @@ FetchContent_MakeAvailable(spdlog)
 set(SPDLOG_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/external/spdlog/include)
 
 # -------------------------- #
-# Target: vmtheme[32|64].dll #
+# Target: vmchroma[32|64].dll #
 # -------------------------- #
 
-set(VMTHEME_SOURCES src/vmtheme.cpp src/utils.h src/utils.cpp)
+set(VMCHROMA_SOURCES
+        src/vmchroma/vmchroma.cpp
+        src/vmchroma/utils.hpp
+        src/vmchroma/utils.cpp
+        src/vmchroma/winapi_hook_defs.hpp
+        src/vmchroma/window_manager.cpp
+        src/vmchroma/window_manager.hpp
+        src/vmchroma/config_manager.cpp
+        src/vmchroma/config_manager.hpp
+)
 
-if (EXISTS "${CMAKE_SOURCE_DIR}/src/vmtheme.rc")
-    list(APPEND VMTHEME_SOURCES src/vmtheme.rc)
+if (EXISTS "${CMAKE_SOURCE_DIR}/src/vmchroma/vmchroma.rc")
+    list(APPEND VMCHROMA_SOURCES src/vmchroma/vmchroma.rc)
 endif ()
 
-add_library(${TARGET_VMTHEME} SHARED ${VMTHEME_SOURCES})
-target_include_directories(${TARGET_VMTHEME} PUBLIC ${DETOURS_SOURCE})
-target_include_directories(${TARGET_VMTHEME} PUBLIC ${SPDLOG_INCLUDE_DIR})
-target_link_libraries(${TARGET_VMTHEME} PRIVATE
+add_library(${TARGET_VMCHROMA} SHARED ${VMCHROMA_SOURCES})
+target_include_directories(${TARGET_VMCHROMA} PUBLIC ${DETOURS_SOURCE})
+target_include_directories(${TARGET_VMCHROMA} PUBLIC ${SPDLOG_INCLUDE_DIR})
+target_include_directories(${TARGET_VMCHROMA} PUBLIC ${CAPSTONE_INCLUDE_DIR})
+target_link_libraries(${TARGET_VMCHROMA} PRIVATE
         lib_detours
         yaml-cpp::yaml-cpp
+        Msimg32
         Shlwapi
+        d2d1
+        d3d11
+        dxgi
         Version
+        advapi32
+        capstone
 )
-set_target_properties(${TARGET_VMTHEME} PROPERTIES
+set_target_properties(${TARGET_VMCHROMA} PROPERTIES
         LINK_FLAGS "/EXPORT:dummy_export,@1"
-        OUTPUT_NAME "vmtheme${ARCH_POSTFIX}"
+        OUTPUT_NAME "vmchroma${ARCH_POSTFIX}"
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/out
         RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/out
         RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}/out
@@ -123,10 +155,10 @@ set_target_properties(${TARGET_VMTHEME} PROPERTIES
 # Target: addimport[32|64].exe #
 # ---------------------------- #
 
-set(ADDIMPORT_SOURCES src/addimport.cpp)
+set(ADDIMPORT_SOURCES src/addimport/addimport.cpp)
 
-if (EXISTS "${CMAKE_SOURCE_DIR}/src/addimport.rc")
-    list(APPEND ADDIMPORT_SOURCES src/addimport.rc)
+if (EXISTS "${CMAKE_SOURCE_DIR}/src/addimport/addimport.rc")
+    list(APPEND ADDIMPORT_SOURCES src/addimport/addimport.rc)
 endif ()
 
 add_executable(${TARGET_ADDIMPORT} ${ADDIMPORT_SOURCES})
@@ -134,6 +166,8 @@ target_include_directories(${TARGET_ADDIMPORT} PUBLIC ${DETOURS_SOURCE})
 target_link_libraries(${TARGET_ADDIMPORT} PRIVATE
         lib_detours
 )
+target_compile_options(${TARGET_ADDIMPORT} PRIVATE /Od /Zi /MTd)
+target_link_options(${TARGET_ADDIMPORT} PRIVATE /DEBUG)
 set_target_properties(${TARGET_ADDIMPORT} PROPERTIES
         OUTPUT_NAME "addimport${ARCH_POSTFIX}"
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/out
@@ -141,15 +175,28 @@ set_target_properties(${TARGET_ADDIMPORT} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}/out
 )
 
-# -------------------------------- #
-# Target: copy vmtheme_patcher.ps1 #
-# -------------------------------- #
+# --------------------------------- #
+# Target: copy vmchroma_patcher.ps1 #
+# --------------------------------- #
 
-set(PATCHER_SOURCE_FILE "${CMAKE_SOURCE_DIR}/src/vmtheme_patcher.ps1")
-set(PATCHER_DEST_FILE "${CMAKE_SOURCE_DIR}/out/vmtheme_patcher.ps1")
+set(PATCHER_SOURCE_FILE "${CMAKE_SOURCE_DIR}/src/vmchroma_patcher.ps1")
+set(PATCHER_DEST_FILE "${CMAKE_SOURCE_DIR}/out/vmchroma_patcher.ps1")
 add_custom_command(
         OUTPUT ${PATCHER_DEST_FILE}
         COMMAND ${CMAKE_COMMAND} -E copy ${PATCHER_SOURCE_FILE} ${PATCHER_DEST_FILE}
-        DEPENDS ${SOURCE_FILE}
+        DEPENDS ${PATCHER_SOURCE_FILE}
 )
-add_custom_target(CopyFile ALL DEPENDS ${PATCHER_DEST_FILE})
+add_custom_target(CopyPatcher ALL DEPENDS ${PATCHER_DEST_FILE})
+
+# -------------------------- #
+# Target: copy vmchroma.yaml #
+# -------------------------- #
+
+set(CONFIG_SOURCE_FILE "${CMAKE_SOURCE_DIR}/src/vmchroma.yaml")
+set(CONFIG_DEST_FILE "${CMAKE_SOURCE_DIR}/out/vmchroma.yaml")
+add_custom_command(
+        OUTPUT ${CONFIG_DEST_FILE}
+        COMMAND ${CMAKE_COMMAND} -E copy ${CONFIG_SOURCE_FILE} ${CONFIG_DEST_FILE}
+        DEPENDS ${CONFIG_SOURCE_FILE}
+)
+add_custom_target(CopyConfig ALL DEPENDS ${CONFIG_DEST_FILE})

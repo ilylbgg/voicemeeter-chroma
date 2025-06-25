@@ -18,32 +18,24 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include <windows.h>
-#include <detours.h>
 #include <string>
 #include <optional>
-#include <vector>
-#include <detours.h>
-#include <fstream>
-#include <shlwapi.h>
-#include <filesystem>
-#include <algorithm>
-#include <iomanip>
-#include <psapi.h>
-#include <shlobj.h>
-#include <sstream>
-#include <iostream>
 
 #include <spdlog/spdlog.h>
-#include <spdlog/sinks/rotating_file_sink.h>
-#include <yaml-cpp/yaml.h>
 
-typedef struct signature
-{
-    const std::vector<uint8_t> pattern;
-    const char* mask;
-} signature_t;
+#if defined(_WIN64)
+#define ARCH_CALL __fastcall
+#else
+#define ARCH_CALL __stdcall
+#endif
 
-const enum flavor_id { FLAVOR_DEFAULT, FLAVOR_BANANA, FLAVOR_POTATO };
+#if defined(_WIN64)
+#define WNDPROC_SUB_CALL __fastcall
+#else
+#define WNDPROC_SUB_CALL __cdecl
+#endif
+
+const enum flavor_id { FLAVOR_NONE, FLAVOR_DEFAULT, FLAVOR_BANANA, FLAVOR_POTATO };
 
 const enum color_category { CATEGORY_TEXT, CATEGORY_SHAPES };
 
@@ -51,10 +43,43 @@ typedef struct flavor_info
 {
     std::string name;
     flavor_id id;
-    uint32_t bitmap_size_main{};
-    uint32_t bitmap_size_settings{};
-    uint32_t bitmap_size_cassette{};
+    uint32_t bitmap_width_main{};
+    uint32_t bitmap_width_settings{};
+    uint32_t bitmap_width_cassette{};
+    uint32_t htclient_x1{};
+    uint32_t htclient_x2{};
 } flavor_info_t;
+
+typedef struct createwindowexa_lparam
+{
+    HWND hwnd;
+    int32_t x;
+    int32_t y;
+    int32_t wnd_id;
+    void* unk2;
+    void* wndproc;
+
+
+} createwindowexa_lparam_t;
+
+typedef struct dialogbox_initparam
+{
+    int32_t x;
+    int32_t y;
+    int32_t width;
+    int32_t height;
+    int32_t unk1;
+    int32_t unk2;
+} dialogbox_initparam_t;
+
+typedef struct signature
+{
+    std::vector<uint8_t> pattern;
+    std::string mask;
+} signature_t;
+
+typedef void (ARCH_CALL *o_scroll_handler_t)(uint64_t* a1, HWND hwnd, uint32_t x, uint32_t y, uint32_t a5);
+typedef LRESULT (WNDPROC_SUB_CALL *o_WndProc_chldwnd_t)(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam, uint64_t a5);
 
 namespace utils
 {
@@ -68,9 +93,10 @@ std::optional<COLORREF> hex_to_colorref(const std::string&);
 std::optional<PVOID> find_function_signature(const signature_t&);
 bool load_bitmap(const std::wstring&, std::vector<uint8_t>&);
 std::optional<std::wstring> get_userprofile_path();
-std::optional<std::string> get_yaml_color(const YAML::Node&, const std::string&, const color_category&);
-std::optional<flavor_id> get_flavor_id();
 void setup_logging();
+bool apply_scroll_patch64(o_scroll_handler_t);
+bool apply_scroll_patch32(flavor_id flavor_id, uint32_t scroll_value);
+bool hook_single_fn(PVOID* o_fn, PVOID hk_fn);
 
 /**
  * Allocate console to print debug messages

@@ -37,7 +37,10 @@ static BOOL CALLBACK AddBywayCallback(PVOID pContext, LPCSTR pszFile, LPCSTR* pp
 int main(int argc, char** argv)
 {
     if (argc != 4)
+    {
+        printf("wrong number of arguments\n");
         exit(ERROR_INVALID_PARAMETER);
+    }
 
     dll_path = argv[1];
     std::string exe_path_old = argv[2];
@@ -66,7 +69,6 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    // DetourBinaryResetImports(binary);
     BOOL bAddedDll = FALSE;
 
     if (!DetourBinaryEditImports(binary, &bAddedDll, AddBywayCallback, nullptr, nullptr, nullptr))

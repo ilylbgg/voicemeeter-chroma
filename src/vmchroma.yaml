@@ -1,0 +1,28 @@
+theme:
+  banana:
+  potato:
+  default:
+
+misc:
+  # Amount of dB change when scrolling with mouse wheel
+  # Range: 1 ≤ value
+  faderScrollStep: 3
+
+  # (x64 only) Amount of dB change when scrolling with mouse wheel while holding shift
+  # Range: 1 ≤ value
+  faderShiftScrollStep: 3
+
+  # Font rendering quality
+  # Range: 0 ≤ value ≤ 6
+  # Choose 6 or 4 for best quality
+  fontQuality: 6
+
+  # Restores the last window size on start
+  # Range: true | false
+  restoreSize: true
+
+  # Time interval between UI updates without user interaction, in milliseconds
+  # (This mainly affects the dB Meters)
+  # 16ms = ~60fps
+  # Range: 1 ≤ value
+  updateIntervalUI: 16
