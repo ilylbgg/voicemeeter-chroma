@@ -2,7 +2,7 @@
 
 <p align="center">
   <br>
-  <em>VoiceMeeter Chroma is a mod that adds theme support to Voicemeeter.</em>
+  <em>VoiceMeeter Chroma is a mod that adds theme support and quality-of-life features, such as window resizing, to Voicemeeter.</em>
   <br>
 </p>
 
@@ -54,8 +54,8 @@ Patches the import table of the Voicemeeter executable by adding an entry for `v
 
 #### vmchroma_patcher.ps1
 
-Runs `addimport32.exe` and `addimport64.exe` to patch the 32bit and 64bit version of the Voicemeeter executable of your choice (Default, Banana, Potato).
-It creates a new executable with `_vmchroma` suffix and only patches this copy (i.e. if you select "Potato", it creates `voicemeeter8_vmchroma.exe` and `voicemeeter8x64_vmchroma.exe`).
+Runs `addimport32.exe` and `addimport64.exe` to patch the 32bit and 64bit versions of Voicemeeter.
+It creates new executables with `_vmchroma` suffix and only patches these copies.
 It then copies `vmchroma32.dll` and `vmchroma64.dll` into the Voicemeeter installation directory.
 
 <a name="status"></a>
@@ -82,8 +82,9 @@ powershell -ExecutionPolicy Bypass -File .\vmchroma_patcher.ps1
 ```
 
 5. Press enter to run the script. You should see `Voicemeeter patching complete!` at the end.
-6. Choose a [supported theme](#-supported-themes) and place it in `C:\Users\<USER>\Documents\Voicemeeter\themes\`
-7. Start Voicemeeter VMChroma using the newly created shortcuts in the windows start menu (press Windows key and search for `VMChroma`) 
+6. Choose a [supported theme](#-supported-themes), copy it to `C:\Users\<USER>\Documents\Voicemeeter\themes\` and set the name in the config file as described in the theme readme.
+7. Change other settings in the config file to your liking.
+8. Start Voicemeeter VMChroma using the newly created shortcuts in the windows start menu (press Windows key and search for `VMChroma`) 
 
 <a name="supported-themes"></a>
 ## 🎨 Supported Themes

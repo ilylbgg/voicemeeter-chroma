@@ -569,8 +569,6 @@ LRESULT ARCH_CALL hk_WndProc_main(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
                 return ret;
             }
         }
-
-
 #endif
 
         return ret;
