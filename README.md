@@ -122,6 +122,10 @@ Install the following toolchain if you don't have it installed already (older ve
 
 No, this is a completely unofficial mod that is not affiliated with Voicemeeter or VB-Audio Software in any shape or form, the moderators won't be able to help you, see [Support](#-support).
 
+### Can I use this mod without a theme?
+
+Yes, you can use this mod without a theme. For example, you might want to keep the default UI but still be able to resize the window or change the mouse scroll behaviour. Simply leave the `theme` setting in the config file blank for all three Voicemeeter versions.
+
 ### How does it work?
 
 It patches the Voicemeeter executable so that it loads the mod DLL on start-up. The mod then hooks (= intercepts) some Windows API functions responsible for drawing on the application surface. This includes: [CreatePen](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createpen), [CreateBrushIndirect](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createbrushindirect) and [SetTextColor](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-settextcolor), among others. It also hooks a specific function in order to swap out the background bitmap.
