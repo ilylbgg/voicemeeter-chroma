@@ -83,7 +83,7 @@ powershell -ExecutionPolicy Bypass -File .\vmchroma_patcher.ps1
 
 5. Press enter to run the script. You should see `Voicemeeter patching complete!` at the end.
 6. Choose a [supported theme](#-supported-themes) and place it in `C:\Users\<USER>\Documents\Voicemeeter\themes\`
-7. Run one of the newly created `voicemeeter*_vmchroma.exe` files in the `C:\Program Files (x86)\VB\Voicemeeter` folder to start Voicemeeter with the theme applied.
+7. Start Voicemeeter VMChroma using the newly created shortcuts in the windows start menu (press Windows key and search for `VMChroma`) 
 
 <a name="supported-themes"></a>
 ## 🎨 Supported Themes
@@ -159,5 +159,7 @@ If you want the original background images embedded in the Voicemeeter executabl
     - For log file functionality.
 - yaml-cpp [https://github.com/jbeder/yaml-cpp](https://github.com/jbeder/yaml-cpp)
     - for parsing configuration files.
+- capstone [https://github.com/capstone-engine/capstone](https://github.com/capstone-engine/capstone)
+    - to find some instructions needed for patching 
 
 The dependencies are pulled and built from source in the build step via the CMakeLists.txt file.
