@@ -132,6 +132,7 @@ It patches the Voicemeeter executable so that it loads the mod DLL on start-up. 
 
 To make the window resizable, VMChroma modifies the rendering logic by tricking the application to use a Direct2D compatible, fixed-size memory device context, instead of rendering to the window directly. The content of the memory device context is then scaled and rendered to the actual window using Direct2D. The WndProc function is hooked
 to intercept messages containing mouse coordinates, which are mapped to the original window size, so that Voicemeeter can process them normally.
+
 Hooking is done using the Microsoft Detours library: https://github.com/microsoft/Detours/wiki
 
 ### Does it modify the Voicemeeter executable on disk?
