@@ -19,34 +19,47 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <detours.h>
 #include <fstream>
 
-static std::string dll_path;
+static std::wstring dll_path;
 
-static BOOL CALLBACK AddBywayCallback(PVOID pContext, LPCSTR pszFile, LPCSTR* ppszOutFile)
+static BOOL CALLBACK cb(PVOID pContext, LPCSTR pszFile, LPCSTR* ppszOutFile)
 {
-    auto pbAddedDll = static_cast<PBOOL>(pContext);
+    auto added_dll = static_cast<bool*>(pContext);
 
-    if (!pszFile && !*pbAddedDll)
+    if (!pszFile && !*added_dll)
     {
-        *pbAddedDll = TRUE;
-        *ppszOutFile = dll_path.c_str();
+        const int size = WideCharToMultiByte(CP_UTF8, 0, dll_path.c_str(), -1, nullptr, 0, nullptr, nullptr);
+        static std::string res(size - 1, 0);
+        WideCharToMultiByte(CP_UTF8, 0, dll_path.c_str(), -1, res.data(), size, nullptr, nullptr);
+
+        *ppszOutFile = res.c_str();
+        *added_dll = true;
     }
 
     return TRUE;
 }
 
-int main(int argc, char** argv)
+int wmain(int argc, wchar_t* argv[])
 {
-    if (argc != 4)
-    {
-        printf("wrong number of arguments\n");
-        exit(ERROR_INVALID_PARAMETER);
+    // int argc;
+    // auto argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+
+    if (argv == nullptr) {
+        MessageBoxW(nullptr, L"Failed to parse command line", L"Error", MB_OK);
+        return 1;
+    }
+
+    if (argc != 4) {
+        MessageBoxW(nullptr, L"wrong number of args", L"Error", MB_OK);
+        return 1;
     }
 
     dll_path = argv[1];
-    std::string exe_path_old = argv[2];
-    std::string exe_path_new = argv[3];
+    wprintf(L"adding %s", dll_path.c_str());
 
-    HANDLE handle_exe_old = CreateFileA(exe_path_old.c_str(),
+    const std::wstring exe_path_old = argv[2];
+    const std::wstring exe_path_new = argv[3];
+
+    const auto handle_exe_old = CreateFileW(exe_path_old.c_str(),
                                     GENERIC_READ,
                                     FILE_SHARE_READ,
                                     nullptr,
@@ -56,29 +69,29 @@ int main(int argc, char** argv)
 
     if (handle_exe_old == INVALID_HANDLE_VALUE)
     {
-        printf("couldn't open input file: %s, error: %d\n", exe_path_old.c_str(), GetLastError());
+        wprintf(L"action failed: %s, error: %d\n", exe_path_old.c_str(), GetLastError());
         exit(1);
     }
 
-    PDETOUR_BINARY binary = DetourBinaryOpen(handle_exe_old);
+    const auto binary = DetourBinaryOpen(handle_exe_old);
     CloseHandle(handle_exe_old);
 
     if (!binary)
     {
-        printf("action failed: %d\n", GetLastError());
+        wprintf(L"action failed: %d\n", GetLastError());
         exit(1);
     }
 
-    BOOL bAddedDll = FALSE;
+    bool added_dll = false;
 
-    if (!DetourBinaryEditImports(binary, &bAddedDll, AddBywayCallback, nullptr, nullptr, nullptr))
+    if (!DetourBinaryEditImports(binary, &added_dll, cb, nullptr, nullptr, nullptr))
     {
-        printf("action failed: %d\n", GetLastError());
+        wprintf(L"action failed: %d\n", GetLastError());
         DetourBinaryClose(binary);
         exit(1);
     }
 
-    HANDLE handle_exe_new = CreateFileA(exe_path_new.c_str(),
+    const auto handle_exe_new = CreateFileW(exe_path_new.c_str(),
                              GENERIC_READ | GENERIC_WRITE,
                              0,
                              nullptr,
@@ -88,12 +101,12 @@ int main(int argc, char** argv)
 
     if (handle_exe_new == INVALID_HANDLE_VALUE)
     {
-        printf("couldn't open input file: %s, error: %d\n", exe_path_new.c_str(), GetLastError());
+        wprintf(L"action failed: %s, error: %d\n", exe_path_new.c_str(), GetLastError());
         exit(1);
     }
 
     if (!DetourBinaryWrite(binary, handle_exe_new)) {
-        printf("action failed: %d\n", GetLastError());
+        wprintf(L"action failed: %d\n", GetLastError());
         DetourBinaryClose(binary);
         CloseHandle(handle_exe_new);
         exit(1);
@@ -101,6 +114,7 @@ int main(int argc, char** argv)
 
     DetourBinaryClose(binary);
     CloseHandle(handle_exe_new);
-    printf("success: %s\n", exe_path_new.c_str());
+    wprintf(L"success: %s\n", exe_path_new.c_str());
+
     return 0;
 }

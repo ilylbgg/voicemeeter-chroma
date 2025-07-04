@@ -41,7 +41,7 @@ endif ()
 
 FetchContent_Declare(
         detours
-        URL https://github.com/microsoft/Detours/archive/refs/tags/v4.0.1.tar.gz
+        URL https://github.com/microsoft/Detours/archive/9764cebcb1a75940e68fa83d6730ffaf0f669401.zip
         SOURCE_DIR ${CMAKE_SOURCE_DIR}/external/detours
 )
 FetchContent_MakeAvailable(detours)
@@ -62,7 +62,7 @@ add_library(${TARGET_DETOURS} STATIC
         ${DETOURS_SOURCE}/uimports.cpp
 )
 set_property(SOURCE ${DETOURS_SOURCE}/uimports.cpp APPEND PROPERTY HEADER_FILE_ONLY true)
-target_compile_options(${TARGET_DETOURS} PRIVATE /W4 /WX /Zi /MT /Gy /Gm- /Zl /Od)
+target_compile_options(${TARGET_DETOURS} PRIVATE /W4 /WX /Gy /Zl)
 target_include_directories(${TARGET_DETOURS} PUBLIC ${DETOURS_SOURCE})
 
 # ------------------ #
@@ -166,8 +166,6 @@ target_include_directories(${TARGET_ADDIMPORT} PUBLIC ${DETOURS_SOURCE})
 target_link_libraries(${TARGET_ADDIMPORT} PRIVATE
         lib_detours
 )
-target_compile_options(${TARGET_ADDIMPORT} PRIVATE /Od /Zi /MTd)
-target_link_options(${TARGET_ADDIMPORT} PRIVATE /DEBUG)
 set_target_properties(${TARGET_ADDIMPORT} PROPERTIES
         OUTPUT_NAME "addimport${ARCH_POSTFIX}"
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/out

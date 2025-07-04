@@ -112,7 +112,7 @@ foreach ($exe in $vmNamesExist32)
     Invoke-Expression $cmd32
     if ($LASTEXITCODE -ne 0)
     {
-        Write-Host "addimport32.exe failed for $dll with exit code $LASTEXITCODE. Exiting..." -ForegroundColor Red
+        Write-Host "addimport32.exe failed for $exe with exit code $LASTEXITCODE. Exiting..." -ForegroundColor Red
         Pause
         exit $LASTEXITCODE
     }
@@ -128,7 +128,7 @@ foreach ($exe in $vmNamesExist64)
     Invoke-Expression $cmd64
     if ($LASTEXITCODE -ne 0)
     {
-        Write-Host "addimport64.exe failed for $dll with exit code $LASTEXITCODE. Exiting..." -ForegroundColor Red
+        Write-Host "addimport64.exe failed for $exe with exit code $LASTEXITCODE. Exiting..." -ForegroundColor Red
         Pause
         exit $LASTEXITCODE
     }
@@ -165,7 +165,7 @@ foreach ($dll in @("vmchroma32.dll", "vmchroma64.dll"))
 # Copy vmchroma.yaml to Documents/Voicemeeter
 
 $vmchromaConfigSource = Join-Path $scriptDir "vmchroma.yaml"
-$documentsPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "Voicemeeter"
+$documentsPath = Join-Path ([Environment]::GetFolderPath(5)) "Voicemeeter"
 $vmchromaConfigDest = Join-Path $documentsPath "vmchroma.yaml"
 
 Write-Host
