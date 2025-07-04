@@ -2,7 +2,7 @@
 
 <p align="center">
   <br>
-  <em>VoiceMeeter Chroma is a mod that adds theme support and quality-of-life features, such as window resizing, to Voicemeeter.</em>
+  <em>A mod that adds theme support and quality-of-life features, such as window resizing, to Voicemeeter.</em>
   <br>
 </p>
 
