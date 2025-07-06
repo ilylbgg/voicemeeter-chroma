@@ -72,6 +72,8 @@ Tested on Windows 10 & Windows 11 for the following Voicemeeter versions:
 <a name="getting-started"></a>
 ## 🚀 Getting Started
 
+(For more detailed instructions with screenshots, check out the [wiki](https://github.com/emkaix/voicemeeter-chroma/wiki/Getting-Started))
+
 1. Download the mod from the [Release page](https://github.com/emkaix/voicemeeter-themes-mod/releases) and extract the .zip folder.
 2. Open the extracted folder and `Shift + right-click` somewhere inside the folder.
 3. Select `Open PowerShell window here`.
