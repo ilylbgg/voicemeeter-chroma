@@ -62,7 +62,7 @@ add_library(${TARGET_DETOURS} STATIC
         ${DETOURS_SOURCE}/uimports.cpp
 )
 set_property(SOURCE ${DETOURS_SOURCE}/uimports.cpp APPEND PROPERTY HEADER_FILE_ONLY true)
-target_compile_options(${TARGET_DETOURS} PRIVATE /W4 /WX /Gy /Zl)
+target_compile_options(${TARGET_DETOURS} PRIVATE /W4 /WX /Zi /MT /Gy /Gm- /Zl /Od)
 target_include_directories(${TARGET_DETOURS} PUBLIC ${DETOURS_SOURCE})
 
 # ------------------ #
@@ -142,6 +142,7 @@ target_link_libraries(${TARGET_VMCHROMA} PRIVATE
         Version
         advapi32
         capstone
+        windowsapp
 )
 set_target_properties(${TARGET_VMCHROMA} PROPERTIES
         LINK_FLAGS "/EXPORT:dummy_export,@1"
@@ -162,6 +163,7 @@ if (EXISTS "${CMAKE_SOURCE_DIR}/src/addimport/addimport.rc")
 endif ()
 
 add_executable(${TARGET_ADDIMPORT} ${ADDIMPORT_SOURCES})
+target_compile_options(${TARGET_ADDIMPORT} PRIVATE /MD)
 target_include_directories(${TARGET_ADDIMPORT} PUBLIC ${DETOURS_SOURCE})
 target_link_libraries(${TARGET_ADDIMPORT} PRIVATE
         lib_detours
