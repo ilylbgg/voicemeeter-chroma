@@ -58,8 +58,6 @@ typedef struct createwindowexa_lparam
     int32_t wnd_id;
     void* unk2;
     void* wndproc;
-
-
 } createwindowexa_lparam_t;
 
 typedef struct dialogbox_initparam
