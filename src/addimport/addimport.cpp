@@ -43,12 +43,14 @@ int wmain(int argc, wchar_t* argv[])
     // int argc;
     // auto argv = CommandLineToArgvW(GetCommandLineW(), &argc);
 
-    if (argv == nullptr) {
+    if (argv == nullptr)
+    {
         MessageBoxW(nullptr, L"Failed to parse command line", L"Error", MB_OK);
         return 1;
     }
 
-    if (argc != 4) {
+    if (argc != 4)
+    {
         MessageBoxW(nullptr, L"wrong number of args", L"Error", MB_OK);
         return 1;
     }
@@ -105,7 +107,8 @@ int wmain(int argc, wchar_t* argv[])
         exit(1);
     }
 
-    if (!DetourBinaryWrite(binary, handle_exe_new)) {
+    if (!DetourBinaryWrite(binary, handle_exe_new))
+    {
         wprintf(L"action failed: %d\n", GetLastError());
         DetourBinaryClose(binary);
         CloseHandle(handle_exe_new);
