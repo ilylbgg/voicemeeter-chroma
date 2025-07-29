@@ -29,7 +29,7 @@
 <a name="support"></a>
 ## 🩹 Support
 
-For any problems or bug reports, please create an issue here on Github or ask on the dedicated [Discord server](https://discord.gg/MdpWZGqm).
+For any problems or bug reports, please create an issue here on Github or ask on the dedicated [Discord server](https://discord.gg/VSwsqXZaTD).
 
 <a name="overview"></a>
 ## 🗺️ Overview
