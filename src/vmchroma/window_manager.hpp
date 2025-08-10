@@ -42,8 +42,8 @@ typedef struct window_ctx
     winrt::com_ptr<ID2D1DeviceContext> d2d_context;
     winrt::com_ptr<ID2D1Bitmap1> target_bitmap;
     winrt::com_ptr<ID2D1Bitmap1> source_bitmap;
-    winrt::com_ptr<ID3D11Texture2D> gdi_texture;
-    winrt::com_ptr<IDXGISurface1> dxgi_surface;
+    winrt::com_ptr<ID3D11Texture2D> source_texture;
+    winrt::com_ptr<IDXGISurface1> source_surface;
 } window_ctx_t;
 
 class window_manager
@@ -66,6 +66,12 @@ private:
         {DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE},
         96.0f, 96.0f,
         D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+        nullptr
+    };
+    D2D1_BITMAP_PROPERTIES1 source_bitmap_props = {
+        {DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE},
+        96.0f, 96.0f,
+        D2D1_BITMAP_OPTIONS_NONE,
         nullptr
     };
 

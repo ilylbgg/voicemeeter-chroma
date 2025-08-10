@@ -485,7 +485,7 @@ std::optional<bool> config_manager::cfg_get_restore_size()
     {
         return yaml_config["misc"]["restoreSize"].as<bool>();
     }
-    catch (YAML::TypedBadConversion<uint32_t>&)
+    catch (YAML::TypedBadConversion<bool>&)
     {
         SPDLOG_ERROR("error restoreSize value");
         return std::nullopt;

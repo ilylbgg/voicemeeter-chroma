@@ -31,7 +31,7 @@ window_manager::window_manager()
     {
         winrt::check_hresult(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, d2d_factory.put()));
 
-        UINT creation_flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+        UINT creation_flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_SINGLETHREADED;
 
         D3D_FEATURE_LEVEL featureLevels[] = {D3D_FEATURE_LEVEL_11_0};
         winrt::check_hresult(D3D11CreateDevice(
@@ -101,13 +101,7 @@ bool window_manager::init_window(HWND hwnd, const WND_TYPE type, const CREATESTR
     tex_desc.Usage = D3D11_USAGE_DEFAULT;
     tex_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
     tex_desc.MiscFlags = D3D11_RESOURCE_MISC_GDI_COMPATIBLE;
-
-    D2D1_BITMAP_PROPERTIES1 bm_props_source = {
-        {DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE},
-        96.0f, 96.0f,
-        D2D1_BITMAP_OPTIONS_NONE,
-        nullptr
-    };
+    tex_desc.CPUAccessFlags = 0;
 
     DXGI_SWAP_CHAIN_DESC1 swap_chain_desc = {};
     swap_chain_desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -116,22 +110,23 @@ bool window_manager::init_window(HWND hwnd, const WND_TYPE type, const CREATESTR
     swap_chain_desc.SampleDesc.Count = 1;
     swap_chain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     swap_chain_desc.BufferCount = 2;
-    swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+    swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     swap_chain_desc.Scaling = DXGI_SCALING_STRETCH;
     swap_chain_desc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 
     try
     {
-        winrt::check_hresult(d3d_device->CreateTexture2D(&tex_desc, nullptr, wctx.gdi_texture.put()));
-        winrt::check_hresult(wctx.gdi_texture->QueryInterface(__uuidof(IDXGISurface1), wctx.dxgi_surface.put_void()));
-        winrt::check_hresult(wctx.dxgi_surface->GetDC(TRUE, &wctx.mem_dc));
+        winrt::check_hresult(d3d_device->CreateTexture2D(&tex_desc, nullptr, wctx.source_texture.put()));
+        winrt::check_hresult(wctx.source_texture->QueryInterface(__uuidof(IDXGISurface1), wctx.source_surface.put_void()));
         winrt::check_hresult(d2d_device->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, wctx.d2d_context.put()));
 
         winrt::check_hresult(wctx.d2d_context->CreateBitmapFromDxgiSurface(
-            wctx.dxgi_surface.get(),
-            &bm_props_source,
+            wctx.source_surface.get(),
+            &source_bitmap_props,
             wctx.source_bitmap.put()
         ));
+
+        winrt::check_hresult(wctx.source_surface->GetDC(FALSE, &wctx.mem_dc));
 
         winrt::check_hresult(dxgi_factory->CreateSwapChainForHwnd(
             d3d_device.get(),
@@ -142,11 +137,13 @@ bool window_manager::init_window(HWND hwnd, const WND_TYPE type, const CREATESTR
             wctx.swap_chain.put()
         ));
 
-        winrt::com_ptr<IDXGISurface> swapChainSurface;
-        winrt::check_hresult(wctx.swap_chain->GetBuffer(0, __uuidof(IDXGISurface), swapChainSurface.put_void()));
+        winrt::check_hresult(dxgi_factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
+
+        winrt::com_ptr<IDXGISurface1> swap_chain_surface;
+        winrt::check_hresult(wctx.swap_chain->GetBuffer(0, __uuidof(IDXGISurface1), swap_chain_surface.put_void()));
 
         winrt::check_hresult(wctx.d2d_context->CreateBitmapFromDxgiSurface(
-            swapChainSurface.get(),
+            swap_chain_surface.get(),
             &target_bitmap_props,
             wctx.target_bitmap.put()
         ));
@@ -174,7 +171,7 @@ void window_manager::destroy_window(HWND hwnd)
 
     try
     {
-        winrt::check_hresult((wctx.dxgi_surface->ReleaseDC(nullptr)));
+        winrt::check_hresult((wctx.source_surface->ReleaseDC(nullptr)));
     }
     catch (const winrt::hresult_error& ex)
     {
@@ -195,7 +192,9 @@ void window_manager::render(HWND hwnd)
 
     try
     {
-        winrt::check_hresult(wctx.dxgi_surface->ReleaseDC(nullptr));
+        GdiFlush();
+
+        winrt::check_hresult(wctx.source_surface->ReleaseDC(nullptr));
 
         RECT rc;
         o_GetClientRect(wctx.hwnd, &rc);
@@ -204,7 +203,6 @@ void window_manager::render(HWND hwnd)
         const float scaleY = rc.bottom / static_cast<float>(wctx.default_cy);
 
         wctx.d2d_context->BeginDraw();
-        wctx.d2d_context->Clear(D2D1::ColorF(D2D1::ColorF::Black));
 
         wctx.d2d_context->SetTransform(D2D1::Matrix3x2F::Scale(scaleX, scaleY));
 
@@ -212,14 +210,24 @@ void window_manager::render(HWND hwnd)
             wctx.source_bitmap.get(),
             D2D1::Point2F(0, 0),
             D2D1::RectF(0, 0, static_cast<float>(wctx.default_cx), static_cast<float>(wctx.default_cy)),
-            D2D1_INTERPOLATION_MODE_HIGH_QUALITY_CUBIC
+            D2D1_INTERPOLATION_MODE_HIGH_QUALITY_CUBIC,
+            D2D1_COMPOSITE_MODE_SOURCE_COPY
         );
 
         winrt::check_hresult(wctx.d2d_context->EndDraw());
 
         winrt::check_hresult(wctx.swap_chain->Present(1, 0));
 
-        winrt::check_hresult(wctx.dxgi_surface->GetDC(TRUE, &wctx.mem_dc));
+        wctx.mem_dc = nullptr;
+        wctx.source_bitmap = nullptr;
+
+        winrt::check_hresult(wctx.d2d_context->CreateBitmapFromDxgiSurface(
+            wctx.source_surface.get(),
+            &source_bitmap_props,
+            wctx.source_bitmap.put()
+        ));
+
+        winrt::check_hresult(wctx.source_surface->GetDC(FALSE, &wctx.mem_dc));
     }
     catch (const winrt::hresult_error& ex)
     {
@@ -269,11 +277,11 @@ void window_manager::resize_d2d(HWND hwnd, const D2D1_SIZE_U& pixelSize)
             0, pixelSize.width, pixelSize.height, DXGI_FORMAT_B8G8R8A8_UNORM, 0
         ));
 
-        winrt::com_ptr<IDXGISurface> swapChainSurface;
-        winrt::check_hresult(wctx.swap_chain->GetBuffer(0, __uuidof(IDXGISurface), swapChainSurface.put_void()));
+        winrt::com_ptr<IDXGISurface1> swap_chain_surface;
+        winrt::check_hresult(wctx.swap_chain->GetBuffer(0, __uuidof(IDXGISurface1), swap_chain_surface.put_void()));
 
         winrt::check_hresult(wctx.d2d_context->CreateBitmapFromDxgiSurface(
-            swapChainSurface.get(),
+            swap_chain_surface.get(),
             &target_bitmap_props,
             wctx.target_bitmap.put()
         ));
