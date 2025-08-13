@@ -25,7 +25,7 @@ endif ()
 # ---------------- #
 
 add_compile_definitions(
-        VMCHROMA_VERSION="vmchroma 0.2.0"
+        VMCHROMA_VERSION="vmchroma 0.2.1"
         UNICODE
         ARCH_POSTFIX="${ARCH_POSTFIX}"
         SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE
