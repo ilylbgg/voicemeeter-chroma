@@ -23,6 +23,7 @@ using namespace winrt::Windows;
 using namespace winrt::Windows::Graphics::Display;
 
 /**
+ * BEWARE : you may encounter small lags while resising if using D3D level 10
  * Initializes the Direct2D context
  */
 window_manager::window_manager()
@@ -33,7 +34,7 @@ window_manager::window_manager()
 
         UINT creation_flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_SINGLETHREADED;
 
-        D3D_FEATURE_LEVEL featureLevels[] = {D3D_FEATURE_LEVEL_11_0};
+        D3D_FEATURE_LEVEL featureLevels[] = {D3D_FEATURE_LEVEL_10_0};
         winrt::check_hresult(D3D11CreateDevice(
             nullptr,
             D3D_DRIVER_TYPE_HARDWARE,
