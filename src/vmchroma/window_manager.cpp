@@ -39,19 +39,18 @@ window_manager::window_manager()
             D3D_FEATURE_LEVEL_10_1,
             D3D_FEATURE_LEVEL_10_0,
             };
-        winrt::check_hresult(D3D11CreateDevice(
-            nullptr,
-            D3D_DRIVER_TYPE_HARDWARE,
-            nullptr,
-            creation_flags,
-            featureLevels,
-            1,
-            D3D11_SDK_VERSION,
-            d3d_device.put(),
-            nullptr,
-            nullptr
+       winrt::check_hresult(D3D11CreateDevice(
+           nullptr,
+           D3D_DRIVER_TYPE_HARDWARE,
+           nullptr,
+           creation_flags,
+           featureLevels,
+           3,
+           D3D11_SDK_VERSION,
+           d3d_device.put(),
+           nullptr,
+           nullptr
         ));
-
         dxgi_device = d3d_device.as<IDXGIDevice>();
         winrt::check_hresult(dxgi_device->GetAdapter(adapter.put()));
         dxgi_factory.capture(adapter, &IDXGIAdapter::GetParent);
